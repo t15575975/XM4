@@ -5,6 +5,7 @@ struct DiscoveredDevice: Identifiable {
     let id: UUID
     let name: String
     let rssi: Int
+    var details: [String] = []
 }
 
 @MainActor
@@ -14,6 +15,7 @@ final class BLEScanner: NSObject, ObservableObject {
     @Published var errorMessage: String?
 
     private var central: CBCentralManager!
+    private var peripherals: [UUID: CBPeripheral] = [:]
 
     override init() {
         super.init()
@@ -26,6 +28,7 @@ final class BLEScanner: NSObject, ObservableObject {
             return
         }
         devices.removeAll()
+        peripherals.removeAll()
         errorMessage = nil
         isScanning = true
         central.scanForPeripherals(withServices: nil,
@@ -35,6 +38,21 @@ final class BLEScanner: NSObject, ObservableObject {
     func stop() {
         central.stopScan()
         isScanning = false
+    }
+
+    func inspect(_ id: UUID) {
+        guard let peripheral = peripherals[id] else { return }
+        stop()
+        peripheral.delegate = self
+        errorMessage = "Connecting to \(peripheral.name ?? "BLE device")…"
+        central.connect(peripheral, options: nil)
+    }
+
+    private func addDetail(_ value: String, to id: UUID) {
+        guard let index = devices.firstIndex(where: { $0.id == id }) else { return }
+        if !devices[index].details.contains(value) {
+            devices[index].details.append(value)
+        }
     }
 }
 
@@ -52,14 +70,55 @@ extension BLEScanner: CBCentralManagerDelegate {
                         didDiscover peripheral: CBPeripheral,
                         advertisementData: [String: Any],
                         rssi RSSI: NSNumber) {
+        peripherals[peripheral.identifier] = peripheral
         let name = peripheral.name
             ?? advertisementData[CBAdvertisementDataLocalNameKey] as? String
             ?? "Unnamed BLE device"
         let device = DiscoveredDevice(id: peripheral.identifier, name: name, rssi: RSSI.intValue)
         if let index = devices.firstIndex(where: { $0.id == device.id }) {
-            devices[index] = device
+            devices[index].name = device.name
+            devices[index].rssi = device.rssi
         } else {
             devices.append(device)
+        }
+    }
+
+    func centralManager(_ central: CBCentralManager, didConnect peripheral: CBPeripheral) {
+        errorMessage = "Connected. Discovering GATT services…"
+        peripheral.discoverServices(nil)
+    }
+
+    func centralManager(_ central: CBCentralManager, didFailToConnect peripheral: CBPeripheral, error: Error?) {
+        errorMessage = "Connection failed: \(error?.localizedDescription ?? "unknown")"
+    }
+
+    func centralManager(_ central: CBCentralManager, didDisconnectPeripheral peripheral: CBPeripheral, error: Error?) {
+        errorMessage = "Disconnected: \(error?.localizedDescription ?? "normal")"
+    }
+}
+
+extension BLEScanner: CBPeripheralDelegate {
+    func peripheral(_ peripheral: CBPeripheral, didDiscoverServices error: Error?) {
+        if let error = error {
+            errorMessage = "Service discovery failed: \(error.localizedDescription)"
+            return
+        }
+        let services = peripheral.services ?? []
+        errorMessage = "Found \(services.count) GATT service(s)."
+        for service in services {
+            addDetail("Service: \(service.uuid.uuidString)", to: peripheral.identifier)
+            peripheral.discoverCharacteristics(nil, for: service)
+        }
+    }
+
+    func peripheral(_ peripheral: CBPeripheral, didDiscoverCharacteristicsFor service: CBService, error: Error?) {
+        if let error = error {
+            addDetail("Discovery error: \(error.localizedDescription)", to: peripheral.identifier)
+            return
+        }
+        for characteristic in service.characteristics ?? [] {
+            addDetail("Characteristic: \(characteristic.uuid.uuidString), properties: \(characteristic.properties.rawValue)",
+                      to: peripheral.identifier)
         }
     }
 }
