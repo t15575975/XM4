@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>CFBundleDisplayName</key>
+    <string>XM4Control</string>
+    <key>CFBundleIdentifier</key>
+    <string>com.example.XM4Control</string>
+    <key>CFBundleName</key>
+    <string>XM4Control</string>
+    <key>CFBundlePackageType</key>
+    <string>APPL</string>
+    <key>CFBundleShortVersionString</key>
+    <string>0.1.0</string>
+    <key>CFBundleVersion</key>
+    <string>1</string>
+    <key>LSRequiresIPhoneOS</key>
+    <true/>
+    <key>NSBluetoothAlwaysUsageDescription</key>
+    <string>XM4Control uses Bluetooth to investigate whether your Sony earbuds expose a supported control service.</string>
+    <key>UILaunchScreen</key>
+    <dict/>
+</dict>
+</plist>

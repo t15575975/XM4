@@ -1,0 +1,29 @@
+name: iOS build (unsigned research artifact)
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ main ]
+
+jobs:
+  build:
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Show Xcode version
+        run: xcodebuild -version
+      - name: Build for iPhone (unsigned)
+        run: |
+          xcodebuild \
+            -project XM4Control.xcodeproj \
+            -scheme XM4Control \
+            -sdk iphoneos \
+            -configuration Debug \
+            -derivedDataPath build/DerivedData \
+            CODE_SIGNING_ALLOWED=NO \
+            build
+      - name: Upload app bundle for inspection
+        uses: actions/upload-artifact@v4
+        with:
+          name: XM4Control-unsigned-app
+          path: build/DerivedData/Build/Products/Debug-iphoneos/XM4Control.app

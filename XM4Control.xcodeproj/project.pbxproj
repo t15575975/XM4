@@ -1,0 +1,30 @@
+// !$*UTF8*$!
+{
+ archiveVersion = 1;
+ classes = {};
+ objectVersion = 56;
+ objects = {
+  A10000000000000000000001 /* App */ = {isa = PBXGroup; children = (A10000000000000000000002, A10000000000000000000003, A10000000000000000000014, A10000000000000000000004,); sourceTree = "<group>"; };
+  A10000000000000000000002 /* App files */ = {isa = PBXGroup; path = App; sourceTree = "<group>"; children = (A10000000000000000000011, A10000000000000000000012,); };
+  A10000000000000000000003 /* Bluetooth */ = {isa = PBXGroup; path = Bluetooth; sourceTree = "<group>"; children = (A10000000000000000000013,); };
+  A10000000000000000000004 /* Products */ = {isa = PBXGroup; children = (A10000000000000000000021,); name = Products; sourceTree = "<group>"; };
+  A10000000000000000000011 /* XM4ControlApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = XM4ControlApp.swift; sourceTree = "<group>"; };
+  A10000000000000000000012 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
+  A10000000000000000000013 /* BLEScanner.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BLEScanner.swift; sourceTree = "<group>"; };
+  A10000000000000000000014 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+  A10000000000000000000021 /* XM4Control.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; path = XM4Control.app; sourceTree = BUILT_PRODUCTS_DIR; };
+  A10000000000000000000031 /* Sources */ = {isa = PBXSourcesBuildPhase; buildActionMask = 2147483647; files = (A10000000000000000000081, A10000000000000000000082, A10000000000000000000083,); runOnlyForDeploymentPostprocessing = 0; };
+  A10000000000000000000081 /* App source build file */ = {isa = PBXBuildFile; fileRef = A10000000000000000000011; };
+  A10000000000000000000082 /* View source build file */ = {isa = PBXBuildFile; fileRef = A10000000000000000000012; };
+  A10000000000000000000083 /* BLE source build file */ = {isa = PBXBuildFile; fileRef = A10000000000000000000013; };
+  A10000000000000000000032 /* Frameworks */ = {isa = PBXFrameworksBuildPhase; buildActionMask = 2147483647; files = (); runOnlyForDeploymentPostprocessing = 0; };
+  A10000000000000000000033 /* Resources */ = {isa = PBXResourcesBuildPhase; buildActionMask = 2147483647; files = (); runOnlyForDeploymentPostprocessing = 0; };
+  A10000000000000000000041 /* App target */ = {isa = PBXNativeTarget; buildConfigurationList = A10000000000000000000051; buildPhases = (A10000000000000000000031, A10000000000000000000032, A10000000000000000000033,); buildRules = (); dependencies = (); name = XM4Control; productName = XM4Control; productReference = A10000000000000000000021; productType = "com.apple.product-type.application"; };
+  A10000000000000000000061 /* Project */ = {isa = PBXProject; attributes = {BuildIndependentTargetsInParallel = 1; LastUpgradeCheck = 1600;}; buildConfigurationList = A10000000000000000000052; compatibilityVersion = "Xcode 14.0"; developmentRegion = en; hasScannedForEncodings = 0; knownRegions = (en, Base); mainGroup = A10000000000000000000001; productRefGroup = A10000000000000000000004; projectDirPath = ""; projectRoot = ""; targets = (A10000000000000000000041,); };
+  A10000000000000000000051 /* Target config list */ = {isa = XCConfigurationList; buildConfigurations = (A10000000000000000000071,); defaultConfigurationIsVisible = 0; defaultConfigurationName = Debug; };
+  A10000000000000000000052 /* Project config list */ = {isa = XCConfigurationList; buildConfigurations = (A10000000000000000000072,); defaultConfigurationIsVisible = 0; defaultConfigurationName = Debug; };
+  A10000000000000000000071 /* Target Debug */ = {isa = XCBuildConfiguration; buildSettings = {ASSETCATALOG_COMPILER_APPICON_NAME = ""; CODE_SIGNING_ALLOWED = NO; GENERATE_INFOPLIST_FILE = NO; INFOPLIST_FILE = XM4Control/Info.plist; IPHONEOS_DEPLOYMENT_TARGET = 16.0; PRODUCT_BUNDLE_IDENTIFIER = com.example.XM4Control; PRODUCT_NAME = "$(TARGET_NAME)"; SDKROOT = iphoneos; SWIFT_VERSION = 5.0; TARGETED_DEVICE_FAMILY = "1,2";}; name = Debug; };
+  A10000000000000000000072 /* Project Debug */ = {isa = XCBuildConfiguration; buildSettings = {IPHONEOS_DEPLOYMENT_TARGET = 16.0; SDKROOT = iphoneos; SWIFT_VERSION = 5.0;}; name = Debug; };
+ };
+ rootObject = A10000000000000000000061;
+}
