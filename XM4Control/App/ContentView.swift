@@ -27,11 +27,14 @@ struct ContentView: View {
                 }
 
                 List(scanner.devices) { device in
-                    VStack(alignment: .leading) {
-                        Text(device.name)
-                            .font(.headline)
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text(device.name).font(.headline)
                         Text(device.id.uuidString)
                             .font(.caption2)
+                            .foregroundStyle(.secondary)
+                            .textSelection(.enabled)
+                        Text("Signal: \(device.rssi) dBm")
+                            .font(.caption)
                             .foregroundStyle(.secondary)
                     }
                 }
