@@ -29,6 +29,11 @@ struct ContentView: View {
                 List(scanner.devices) { device in
                     VStack(alignment: .leading, spacing: 4) {
                         Text(device.name).font(.headline)
+                        Button("Inspect GATT services") { scanner.inspect(device.id) }
+                            .font(.caption)
+                        ForEach(device.details, id: \.self) { detail in
+                            Text(detail).font(.caption2).textSelection(.enabled)
+                        }
                         Text(device.id.uuidString)
                             .font(.caption2)
                             .foregroundStyle(.secondary)
