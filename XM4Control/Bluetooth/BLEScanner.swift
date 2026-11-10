@@ -4,6 +4,7 @@ import CoreBluetooth
 struct DiscoveredDevice: Identifiable {
     let id: UUID
     let name: String
+    let rssi: Int
 }
 
 @MainActor
@@ -54,8 +55,11 @@ extension BLEScanner: CBCentralManagerDelegate {
         let name = peripheral.name
             ?? advertisementData[CBAdvertisementDataLocalNameKey] as? String
             ?? "Unnamed BLE device"
-
-        guard !devices.contains(where: { $0.id == peripheral.identifier }) else { return }
-        devices.append(DiscoveredDevice(id: peripheral.identifier, name: name))
+        let device = DiscoveredDevice(id: peripheral.identifier, name: name, rssi: RSSI.intValue)
+        if let index = devices.firstIndex(where: { $0.id == device.id }) {
+            devices[index] = device
+        } else {
+            devices.append(device)
+        }
     }
 }
