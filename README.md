@@ -2,6 +2,10 @@
 
 Experimental iOS companion project for Sony WF-1000XM4.
 
+## Releases
+- **v1.0.0 stable:** [release/v1.0.0](https://github.com/t15575975/XM4/tree/release/v1.0.0) — frozen owner-confirmed working iOS App, Shortcuts / Action Button baseline.
+- **v1.1.0 in development (main):** interactive Home Screen widget with three direct mode buttons, pending on-device widget verification. See [release notes](docs/RELEASES.md).
+
 ## Current status (2026-11-11)
 
 **Windows Sony ANC control confirmed on physical WF-1000XM4 firmware 2.3.1.** The native Winsock2 tool connected via Bluetooth Classic RFCOMM channel 9, read the Sony V2 `67 15` status, sent `68 15 01 00 00 02 00 14`, received an ACK, and read back **OFF**. The wearer separately confirmed that ANC/environmental processing truly switched off. The previously active mode was AMBIENT level 20.
@@ -15,7 +19,11 @@ From a Windows checkout in `tools/XM4SdpProbe`, use `dotnet run -- --cycle` for 
 
 **iPhone Sony ExternalAccessory ANC control is now physically validated for ANC → AMBIENT.** The stock iPhone opened `jp.co.sony.songpal.mdr.link2`, sent `66 15`, received `67 15`, sent one `68 15` SET, got a protocol ACK, and independently read back AMBIENT. This is direct communication without a Windows relay. The other iOS mode transitions and background App Intents/Action Button execution are not yet physically verified.
 
-## iOS Shortcuts and Home Screen Widget (research build)
+## iOS Shortcuts and Home Screen Widget
+
+**v1.1.0:** The small and medium WidgetKit widgets have three interactive buttons **降噪 / 環境音 / 關閉**, powered by an App Intent intended to execute in the app process. Each request checks actual Sony state, sends at most one SET, and confirms with GET/readback. The widget intentionally does **not** display a claimed live ANC mode because the timeline has only the audio-route snapshot. Widget button runtime behavior still requires physical iPhone testing.
+
+
 
 The iOS app now contains native **App Intents** for Shortcuts and a separately bundled **WidgetKit** extension.
 
