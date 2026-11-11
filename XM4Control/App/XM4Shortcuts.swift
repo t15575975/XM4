@@ -39,6 +39,27 @@ struct CycleXM4ModeIntent: AppIntent {
     }
 }
 
+/// Separate ANC / ambient toggle, never selects OFF.
+struct ToggleXM4ANCAndAmbientIntent: AppIntent {
+    static var title: LocalizedStringResource = "XM4 降噪／環境音切換"
+    static var description = IntentDescription(
+        "只在降噪與環境音之間切換。若目前為 OFF，第一次會啟用降噪。"
+    )
+    static var openAppWhenRun: Bool = false
+
+    func perform() async throws -> some IntentResult & ReturnsValue<String> {
+        let outcome: (Bool, String) = await withCheckedContinuation { continuation in
+            DispatchQueue.main.async {
+                SonyEAProbe.shared.toggleANCAndAmbient { verified, message in
+                    continuation.resume(returning: (verified, message))
+                }
+            }
+        }
+        guard outcome.0 else { throw XM4ShortcutError.unverified(outcome.1) }
+        return .result(value: outcome.1)
+    }
+}
+
 enum XM4ShortcutError: LocalizedError {
     case unverified(String)
 
@@ -63,6 +84,12 @@ struct XM4AppShortcuts: AppShortcutsProvider {
                 phrases: ["Cycle \(.applicationName) noise control"],
                 shortTitle: "XM4 三模式循環",
                 systemImageName: "arrow.triangle.2.circlepath"
+        )
+        AppShortcut(
+                intent: ToggleXM4ANCAndAmbientIntent(),
+                phrases: ["Toggle \(.applicationName) noise canceling and ambient"],
+                shortTitle: "XM4 降噪／環境音",
+                systemImageName: "ear"
         )
     }
 }
