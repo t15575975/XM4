@@ -8,12 +8,25 @@ Experimental iOS companion project for Sony WF-1000XM4.
 
 - `--native-read-anc`: read the real current ANC mode, no setting change (verified).
 - `--set-off`: set OFF with read-before-write / readback verification (verified from AMBIENT).
-- `--set-anc`, `--set-ambient`, `--cycle`: implemented and CI-compiled, **not yet hardware-verified** for all transitions.
+- `--set-anc`, `--set-ambient`, `--cycle`: **all three --cycle transitions hardware-verified** on 2026-11-11 with Sony ACK and post-write readback: OFF → ANC → AMBIENT → OFF.
 - [Windows validation log and source evidence](docs/windows-rfcomm-validation.md).
 
 From a Windows checkout in `tools/XM4SdpProbe`, use `dotnet run -- --cycle` for one step in the requested **ANC → AMBIENT → OFF → ANC** sequence; every command reads the current mode before setting and verifies the result. Test only while stationary.
 
 **iPhone direct-control goal is still blocked.** The iOS project can scan/read BLE, but no usable iOS Sony ANC transport has been validated. Public iOS CoreBluetooth is not a general RFCOMM socket API; ExternalAccessory access needs accessory protocol support. Windows success must not be described as a working iPhone Action Button/IPA solution.
+
+## iOS Shortcuts and Home Screen Widget (0.2.0 research build)
+
+The iOS app now contains native **App Intents** for Shortcuts and a separately bundled **WidgetKit** extension.
+
+- **Shortcut: Check XM4 audio output** — functional passive check of the iPhone's current `AVAudioSession` output route, not a full Bluetooth pairing-status API.
+- **Shortcut: XM4 3-mode cycle (not yet supported on iOS)** — intentionally reports an error and **does not change ANC**, because there is no verified public iOS RFCOMM transport.
+- **Home Screen Widget: XM4 audio status** — shows whether the current iPhone audio output route appears to be WF-1000XM4, plus the check time. A negative result means **not selected as the current audio output**, not necessarily Bluetooth-disconnected. WidgetKit refresh is system-scheduled rather than real-time.
+- **App screen:** Shows active audio route, Sony BLE discovery / GATT experimental connection, and warnings that neither proves generic Bluetooth Classic connection.
+
+For compatibility with Windows-based unsigned IPA signing using a free Apple ID, the Widget currently uses a direct route snapshot and does **not** require App Groups or shared entitlements. Native WidgetKit and App Intents metadata are built into the unsigned IPA, but user installation, re-signing of the `.appex`, Shortcuts appearance and on-device Widget behavior still require device verification.
+
+[Shortcuts and Widget usage / limitations](docs/ios-shortcuts-widget.md).
 
 ## Requirements
 
