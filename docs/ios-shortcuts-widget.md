@@ -38,6 +38,21 @@ Widget target 為 `XM4StatusWidget.appex`，提供主畫面小型／中型 Widge
 
 App 內另顯示 BLE 掃描是否看到 `WF-1000XM4` 廣播，及是否有 App 自身建立的 GATT 連線。這是 **BLE 狀態**，不等於 iOS 的 Classic 音訊藍牙連線，也不等於 Sony ANC 控制通道。
 
+## 已確認：LiveContainer 安裝方式不支援客體 App 的 Widget
+
+2026-11-11 使用者將 XM4Control 0.2.0 放進 **LiveContainer**，可開啟 App，但在 iOS「捷徑」與「加入小工具」都找不到 XM4Control。
+
+這是已知的安裝平台限制，而不是應用程式自己開啟失敗。LiveContainer 官方 [README](https://github.com/LiveContainer/LiveContainer#compatibility) 明言 guest app extensions 無法在 SpringBoard 註冊，因為客體 App 並非由系統安裝且缺少附加 App ID。故 WidgetKit extension 和客體專屬 App Intents 都不能依靠 LiveContainer 進行一般系統註冊。
+
+- **解決方向**：需將 XM4Control 視為 iOS 原生 App **直接側載／系統安裝**，而不是在 LiveContainer「加入 IPA」。使用 Windows 和免費 Apple ID 的 Sideloadly、SideStore／AltStore 等原生側載流程；確認 **保留並重新簽署**主 App 和 `PlugIns/XM4StatusWidget.appex`。
+- 實際安裝若移除 `.appex`，主 App 可能能開，但小工具必然消失。
+- 免費 Apple ID 對同時啟用 App 數與 App IDs 有限制；Widget 會額外消耗至少一個 App ID，不能假定一定有剩餘額度。先確認剩餘配額，**不自動移除目前的 LiveContainer**。
+- 如果只是想從 iOS「捷徑」**啟動** LiveContainer 內的 XM4Control，LiveContainer 自身可能提供 Launch App 捷徑；那是啟動客體 App，**不等於把 XM4Control 的 App Intents／Widget 註冊到系統**，更無法繞過 iOS Sony RFCOMM 控制權限。
+- 直接側載也不是保證所有功能正常：需要在實機確認 Widget 可選取、捷徑動作被索引。CI log 中 `appintentsnltrainingprocessor` 曾顯示非致命的 SSU 訓練資料解析警告，尚待實機驗證捷徑搜尋結果。
+- LiveContainer 現有客體應用程式資料不會自動搬到新安裝的原生 App。
+
+官方參考：[LiveContainer 官方 README](https://github.com/LiveContainer/LiveContainer)、[LiveContainer Add to Home Screen 指南](https://livecontainer.github.io/docs/guides/add-to-home-screen)、[Sideloadly Windows 免費 Apple ID 說明](https://sideloadly.io/)。
+
 ## Windows + 免費 Apple ID 側載
 
 GitHub Actions 的 iOS workflow 於 macOS runner 使用 Xcode 編譯 `XM4Control.app` 和嵌入的 `PlugIns/XM4StatusWidget.appex`，再提供未簽署 IPA。
