@@ -1,6 +1,6 @@
 # WF-1000XM4 Windows RFCOMM validation
 
-Status: **research-only; SDP confirmed; RFCOMM connection not yet confirmed** (2026-11-11).
+Status: **research-only; SDP confirmed; RFCOMM channel 9 native connection confirmed; Sony ANC query pending on-device validation** (2026-11-11).
 
 ## Actual user observations
 
