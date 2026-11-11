@@ -3,8 +3,8 @@ import CoreBluetooth
 
 struct DiscoveredDevice: Identifiable {
     let id: UUID
-    let name: String
-    let rssi: Int
+    var name: String
+    var rssi: Int
     var details: [String] = []
 }
 
@@ -56,7 +56,7 @@ final class BLEScanner: NSObject, ObservableObject {
     }
 }
 
-extension BLEScanner: CBCentralManagerDelegate {
+extension BLEScanner: @preconcurrency CBCentralManagerDelegate {
     func centralManagerDidUpdateState(_ central: CBCentralManager) {
         if central.state != .poweredOn {
             isScanning = false
@@ -97,7 +97,7 @@ extension BLEScanner: CBCentralManagerDelegate {
     }
 }
 
-extension BLEScanner: CBPeripheralDelegate {
+extension BLEScanner: @preconcurrency CBPeripheralDelegate {
     func peripheral(_ peripheral: CBPeripheral, didDiscoverServices error: Error?) {
         if let error = error {
             errorMessage = "Service discovery failed: \(error.localizedDescription)"
