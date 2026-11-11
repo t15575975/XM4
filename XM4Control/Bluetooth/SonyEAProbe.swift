@@ -41,7 +41,7 @@ final class SonyEAProbe: ObservableObject {
         closeSession()
         let accessories = EAAccessoryManager.shared().connectedAccessories
         guard let match = accessories.lazy.compactMap({ accessory -> (EAAccessory, String)? in
-            guard let proto = sonyProtocols.first(where: { accessory.protocolStrings.contains($0) }) else {
+            guard let proto = self.sonyProtocols.first(where: { accessory.protocolStrings.contains($0) }) else {
                 return nil
             }
             return (accessory, proto)
