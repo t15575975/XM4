@@ -17,6 +17,7 @@ try
     foreach (var device in matches)
     {
         Console.WriteLine($"Device: {device.DeviceName}; paired={device.Authenticated}; connected={device.Connected}");
+        Console.WriteLine($"Platform: {System.Runtime.InteropServices.RuntimeInformation.FrameworkDescription}; OS={System.Runtime.InteropServices.RuntimeInformation.OSDescription}; process64bit={Environment.Is64BitProcess}");
         Guid[] services;
         try
         {
@@ -55,6 +56,9 @@ try
         catch (Exception e)
         {
             Console.WriteLine($"CONNECT FAILED: {e.GetType().Name}: {e.Message}");
+            if (e is System.Net.Sockets.SocketException se)
+                Console.WriteLine($"SocketErrorCode={se.SocketErrorCode}; NativeErrorCode={se.NativeErrorCode}; ErrorCode={se.ErrorCode}");
+            Console.WriteLine($"HResult=0x{e.HResult:X8}");
         }
     }
 }
