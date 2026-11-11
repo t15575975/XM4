@@ -15,6 +15,10 @@ final class BLEScanner: NSObject, ObservableObject {
     @Published var errorMessage: String?
     @Published private(set) var observations: [String] = []
     @Published private(set) var connectedDeviceID: UUID?
+    @Published private(set) var xm4BLEConnected = false
+    @Published private(set) var lastXM4SeenAt: Date?
+
+    private var xm4PeripheralIDs = Set<UUID>()
 
     private func record(_ message: String) {
         let stamp = DateFormatter.localizedString(from: Date(), dateStyle: .none, timeStyle: .medium)
@@ -72,6 +76,7 @@ extension BLEScanner: @preconcurrency CBCentralManagerDelegate {
     func centralManagerDidUpdateState(_ central: CBCentralManager) {
         if central.state != .poweredOn {
             isScanning = false
+            xm4BLEConnected = false
             errorMessage = "Bluetooth state: \(central.state.rawValue)"
         } else {
             errorMessage = nil
@@ -86,6 +91,10 @@ extension BLEScanner: @preconcurrency CBCentralManagerDelegate {
         let name = peripheral.name
             ?? advertisementData[CBAdvertisementDataLocalNameKey] as? String
             ?? "Unnamed BLE device"
+        if name.uppercased().contains("WF-1000XM4") || name.uppercased().contains("WF1000XM4") {
+            xm4PeripheralIDs.insert(peripheral.identifier)
+            lastXM4SeenAt = Date()
+        }
         let device = DiscoveredDevice(id: peripheral.identifier, name: name, rssi: RSSI.intValue)
         if let index = devices.firstIndex(where: { $0.id == device.id }) {
             devices[index].name = device.name
@@ -97,17 +106,22 @@ extension BLEScanner: @preconcurrency CBCentralManagerDelegate {
 
     func centralManager(_ central: CBCentralManager, didConnect peripheral: CBPeripheral) {
         connectedDeviceID = peripheral.identifier
+        if xm4PeripheralIDs.contains(peripheral.identifier) {
+            xm4BLEConnected = true
+        }
         errorMessage = "Connected. Discovering GATT services…"
         record("Connected: \(peripheral.name ?? "device")")
         peripheral.discoverServices(nil)
     }
 
     func centralManager(_ central: CBCentralManager, didFailToConnect peripheral: CBPeripheral, error: Error?) {
+        if xm4PeripheralIDs.contains(peripheral.identifier) { xm4BLEConnected = false }
         errorMessage = "Connection failed: \(error?.localizedDescription ?? "unknown")"
     }
 
     func centralManager(_ central: CBCentralManager, didDisconnectPeripheral peripheral: CBPeripheral, error: Error?) {
-        connectedDeviceID = nil
+        if connectedDeviceID == peripheral.identifier { connectedDeviceID = nil }
+        if xm4PeripheralIDs.contains(peripheral.identifier) { xm4BLEConnected = false }
         errorMessage = "Disconnected: \(error?.localizedDescription ?? "normal")"
         record("Disconnected")
     }
