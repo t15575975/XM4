@@ -4,7 +4,7 @@ import ExternalAccessory
 
 /// Sony EASession research. Scanning is passive; the optional status request is
 /// read-only from the user's point of view (it transmits GET 66 15 and protocol ACKs).
-/// No ANC SET 68 15 commands are implemented here.
+/// A user-triggered one-shot cycle requires valid before and after readings.
 final class SonyEAProbe: NSObject, ObservableObject, StreamDelegate {
     @Published private(set) var details: [String] = []
     @Published private(set) var result = "尚未檢查"
@@ -19,6 +19,11 @@ final class SonyEAProbe: NSObject, ObservableObject, StreamDelegate {
     private var buffer = [UInt8]()
     private var pending = [UInt8]()
     private var readOnlyQuery = false
+    private var cycleRequested = false
+    private var waitingForSetAck = false
+    private var waitingForReadback = false
+    private var verifiedCycle = false
+    private var expectedMode = ""
     private var receivedState = false
     private var querySent = false
     private var sequence: UInt8 = 0
@@ -53,7 +58,11 @@ final class SonyEAProbe: NSObject, ObservableObject, StreamDelegate {
         start(query: true)
     }
 
-    private func start(query: Bool) {
+    func cycleOnce() {
+        start(query: true, cycle: true)
+    }
+
+    private func start(query: Bool, cycle: Bool = false) {
         guard !probing else { return }
         closeSession()
         trace = []
@@ -74,6 +83,11 @@ final class SonyEAProbe: NSObject, ObservableObject, StreamDelegate {
         }
         session = opened
         readOnlyQuery = query
+        cycleRequested = cycle
+        waitingForSetAck = false
+        waitingForReadback = false
+        verifiedCycle = false
+        expectedMode = ""
         receivedState = false
         querySent = false
         sequence = 0
@@ -82,24 +96,28 @@ final class SonyEAProbe: NSObject, ObservableObject, StreamDelegate {
         probing = true
         generation += 1
         let token = generation
-        addTrace("Protocol: \(match.1); action: \(query ? "GET ANC only" : "stream-open only")")
+        addTrace("Protocol: \(match.1); action: \(cycle ? "ONE cycle with readback" : (query ? "GET ANC only" : "stream-open only"))")
 
         for stream in [input as Stream, output as Stream] {
             stream.delegate = self
             stream.schedule(in: .main, forMode: .common)
             stream.open()
         }
-        result = query ? "正在開啟串流並等待發送唯讀 ANC 查詢…" : "正在檢查 EASession 串流…"
+        result = cycle ? "先讀取 ANC 狀態，再單次切換並讀回…" : (query ? "正在開啟串流並等待發送唯讀 ANC 查詢…" : "正在檢查 EASession 串流…")
 
-        DispatchQueue.main.asyncAfter(deadline: .now() + (query ? 6 : 2)) { [weak self] in
+        DispatchQueue.main.asyncAfter(deadline: .now() + (cycle ? 10 : (query ? 6 : 2))) { [weak self] in
             guard let self = self, self.probing, self.generation == token else { return }
             let inputStatus = String(describing: input.streamStatus)
             let outputStatus = String(describing: output.streamStatus)
             self.addTrace("Stream end: input=\(inputStatus) output=\(outputStatus)")
             if query {
-                self.result = self.receivedState
-                    ? self.result
-                    : "未取得有效 67 15 ANC 回覆；GET sent=\(self.querySent)。不會嘗試切換模式。"
+                if cycle {
+                    if !self.verifiedCycle {
+                        self.result = "切換未確認：未讀回目標模式，可能已切換；請以官方 App 核對，不自動重試。"
+                    }
+                } else if !self.receivedState {
+                    self.result = "未取得有效 67 15 ANC 回覆；GET sent=\(self.querySent)。未切換模式。"
+                }
             } else {
                 self.result = "EASession stream 狀態：input=\(inputStatus), output=\(outputStatus)；錯誤 input=\(input.streamError?.localizedDescription ?? "none"), output=\(output.streamError?.localizedDescription ?? "none")"
             }
@@ -218,7 +236,15 @@ final class SonyEAProbe: NSObject, ObservableObject, StreamDelegate {
             let type = body[0], receivedSequence = body[1]
             let payload = Array(body[6..<(6 + Int(length))])
             addTrace("RX type=\(hex(type)) seq=\(receivedSequence) payload=\(payload.map(hex).joined(separator: " "))")
-            if type == 0x01 && receivedSequence < 2 { sequence = receivedSequence }
+            if type == 0x01 && receivedSequence < 2 {
+                sequence = receivedSequence
+                if waitingForSetAck {
+                    waitingForSetAck = false
+                    waitingForReadback = true
+                    addTrace("SET ACK; querying independent readback")
+                    sendGet()
+                }
+            }
             if type == 0x0C {
                 enqueue(encode(type: 0x01, sequence: 1 &- (receivedSequence & 1), payload: []))
             }
@@ -227,11 +253,41 @@ final class SonyEAProbe: NSObject, ObservableObject, StreamDelegate {
                 payload[2] == 1 && payload[3] <= 1 &&
                 payload[4] <= 1 && payload[6] <= 1 && payload[7] <= 20 {
                 let mode = payload[3] == 0 ? "OFF" : (payload[4] == 1 ? "AMBIENT" : "ANC")
-                result = "已收到有效 Sony ANC 狀態：\(mode)，環境音等級 \(payload[7])。未更改任何模式。"
                 receivedState = true
+                if waitingForReadback {
+                    waitingForReadback = false
+                    if mode == expectedMode {
+                        verifiedCycle = true
+                        result = "三模式切換已驗證：目前 \(mode)，已收到獨立讀回。"
+                        addTrace("VERIFIED mode=\(mode)")
+                    } else {
+                        result = "切換未驗證：預期 \(expectedMode)，讀回 \(mode)，不重試。"
+                        addTrace("READBACK MISMATCH expected=\(expectedMode) actual=\(mode)")
+                    }
+                } else if cycleRequested && expectedMode.isEmpty {
+                    let next = mode == "ANC" ? "AMBIENT" : (mode == "AMBIENT" ? "OFF" : "ANC")
+                    expectedMode = next
+                    let enable: UInt8 = next == "OFF" ? 0 : 1
+                    let ambient: UInt8 = next == "AMBIENT" ? 1 : 0
+                    let level: UInt8 = payload[7] == 0 ? 1 : payload[7]
+                    let setPayload: [UInt8] = [0x68, 0x15, 0x01, enable, ambient, payload[5], payload[6], level]
+                    addTrace("BEFORE \(mode); SET \(next); wind=\(payload[5]) voice=\(payload[6]) level=\(level)")
+                    result = "已讀取 \(mode)，請求單次切換到 \(next)，等待讀回…"
+                    waitingForSetAck = true
+                    enqueue(encode(type: 0x0C, sequence: sequence, payload: setPayload))
+                    sequence ^= 1
+                } else if !cycleRequested {
+                    result = "已收到有效 Sony ANC 狀態：\(mode)，環境音等級 \(payload[7])。未更改任何模式。"
+                }
             }
         }
         if buffer.firstIndex(of: 0x3E) == nil { buffer.removeAll() }
+    }
+
+    private func sendGet() {
+        addTrace("TX: ANC GET 66 15 (readback)")
+        enqueue(encode(type: 0x0C, sequence: sequence, payload: [0x66, 0x15]))
+        sequence ^= 1
     }
 
     private func encode(type: UInt8, sequence: UInt8, payload: [UInt8]) -> [UInt8] {
