@@ -4,7 +4,7 @@ Experimental iOS companion project for Sony WF-1000XM4.
 
 ## Releases
 - **v1.0.0 stable:** [release/v1.0.0](https://github.com/t15575975/XM4/tree/release/v1.0.0) — frozen owner-confirmed working iOS App, Shortcuts / Action Button baseline.
-- **v1.1.0 in development (main):** interactive Home Screen widget with three direct mode buttons, pending on-device widget verification. See [release notes](docs/RELEASES.md).
+- **v1.2.0 in development (main):** connected-only interactive widget with Sony V2 left/right/case battery percentages and three direct mode buttons; on-device battery/WidgetKit runtime verification pending. See [release notes](docs/RELEASES.md).
 
 ## Current status (2026-11-11)
 
@@ -21,7 +21,7 @@ From a Windows checkout in `tools/XM4SdpProbe`, use `dotnet run -- --cycle` for 
 
 ## iOS Shortcuts and Home Screen Widget
 
-**v1.1.0:** The small and medium WidgetKit widgets have three interactive buttons **降噪 / 環境音 / 關閉**, powered by an extension-compatible App Intent. WidgetKit normally executes these intents in its own extension process; accessing the Sony EASession from that process requires on-device validation. Each request checks actual Sony state, sends at most one SET, and confirms with GET/readback. The widget intentionally does **not** display a claimed live ANC mode because the timeline has only the audio-route snapshot. Widget button runtime behavior still requires physical iPhone testing.
+**v1.2.0:** The small and medium WidgetKit widgets display battery percentages for the left/right earbuds and charging case (when Sony V2 replies are valid), hide mode buttons if the WF-1000XM4 is not present as a connected Sony ExternalAccessory, and have three interactive buttons **降噪 / 環境音 / 關閉**, powered by an extension-compatible App Intent. WidgetKit normally executes these intents in its own extension process; accessing the Sony EASession from that process requires on-device validation. Each request checks actual Sony state, sends at most one SET, and confirms with GET/readback. The widget intentionally does **not** display a claimed live ANC mode because the timeline has only the audio-route snapshot. Widget button runtime behavior still requires physical iPhone testing.
 
 
 
@@ -55,3 +55,10 @@ For compatibility with Windows-based unsigned IPA signing using a free Apple ID,
 ## Safety / privacy
 
 No Apple ID credentials, certificates, provisioning profiles, or device identifiers should be committed to this repository.
+
+### Battery and offline widget behavior (v1.2.0)
+
+- Battery source: Sony V2 `22 09` → `23 09` for left/right and `22 0A` → `23 0A` for case. Only 0–100 values count; missing replies display `--`.
+- Connection is checked using `EAAccessoryManager.connectedAccessories` matching **WF-1000XM4 + link2 + isConnected**. Audio output route alone is not used as the connection gate.
+- Buttons are omitted from the widget when the latest timeline snapshot reports disconnected. WidgetKit owns refresh scheduling (15-minute preferred policy); a disconnection **cannot guarantee immediate disappearance**. Each control still validates the actual connected accessory at execution.
+- The source of the battery decode is [sony-device-center ProtocolV2.cpp](https://github.com/marconvcm/sony-device-center/blob/main/libs/sony-protocol/src/ProtocolV2.cpp). This protocol layout is grounded, but the WF-1000XM4 on-device battery response and use from a WidgetKit extension are **not yet tested**.
