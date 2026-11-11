@@ -25,6 +25,7 @@ final class SonyEAProbe: NSObject, ObservableObject, StreamDelegate {
     private var waitingForReadback = false
     private var verifiedCycle = false
     private var expectedMode = ""
+    private var fixedTargetMode: String?
     private var receivedState = false
     private var querySent = false
     private var sequence: UInt8 = 0
@@ -62,10 +63,23 @@ final class SonyEAProbe: NSObject, ObservableObject, StreamDelegate {
     }
 
     func cycleOnce(completion: ((Bool, String) -> Void)? = nil) {
+        beginModeChange(target: nil, completion: completion)
+    }
+
+    func setMode(_ mode: String, completion: ((Bool, String) -> Void)? = nil) {
+        guard ["ANC", "AMBIENT", "OFF"].contains(mode) else {
+            completion?(false, "模式無效；沒有送出指令。")
+            return
+        }
+        beginModeChange(target: mode, completion: completion)
+    }
+
+    private func beginModeChange(target: String?, completion: ((Bool, String) -> Void)?) {
         guard !probing else {
             completion?(false, "已有 XM4 控制操作進行中；本次未再送出指令。")
             return
         }
+        fixedTargetMode = target
         shortcutCompletion = completion
         start(query: true, cycle: true)
     }
@@ -112,7 +126,7 @@ final class SonyEAProbe: NSObject, ObservableObject, StreamDelegate {
         probing = true
         generation += 1
         let token = generation
-        addTrace("Protocol: \(match.1); action: \(cycle ? "ONE cycle with readback" : (query ? "GET ANC only" : "stream-open only"))")
+        addTrace("Protocol: \(match.1); action: \(cycle ? (fixedTargetMode ?? "ONE cycle") : (query ? "GET ANC only" : "stream-open only"))")
 
         for stream in [input as Stream, output as Stream] {
             stream.delegate = self
@@ -294,8 +308,18 @@ final class SonyEAProbe: NSObject, ObservableObject, StreamDelegate {
                         }
                     }
                 } else if cycleRequested && expectedMode.isEmpty {
-                    let next = mode == "ANC" ? "AMBIENT" : (mode == "AMBIENT" ? "OFF" : "ANC")
+                    let next = fixedTargetMode ?? (mode == "ANC" ? "AMBIENT" : (mode == "AMBIENT" ? "OFF" : "ANC"))
                     expectedMode = next
+                    if mode == next {
+                        verifiedCycle = true
+                        result = "耳機原本已是 \(next)，有效狀態讀取已確認；無需 SET。"
+                        addTrace("ALREADY mode=\(next); no SET")
+                        DispatchQueue.main.async { [weak self] in
+                            self?.completeShortcut()
+                            self?.closeSession()
+                        }
+                        continue
+                    }
                     let enable: UInt8 = next == "OFF" ? 0 : 1
                     let ambient: UInt8 = next == "AMBIENT" ? 1 : 0
                     let level: UInt8 = payload[7] == 0 ? 1 : payload[7]
