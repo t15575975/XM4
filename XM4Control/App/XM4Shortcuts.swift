@@ -50,19 +50,17 @@ enum XM4ShortcutError: LocalizedError {
 
 struct XM4AppShortcuts: AppShortcutsProvider {
     static var appShortcuts: [AppShortcut] {
-        [
-            AppShortcut(
+        AppShortcut(
                 intent: CheckXM4AudioRouteIntent(),
                 phrases: ["Check \(.applicationName) audio output"],
                 shortTitle: "XM4 音訊狀態",
                 systemImageName: "headphones"
-            ),
-            AppShortcut(
+        )
+        AppShortcut(
                 intent: CycleXM4ModeIntent(),
                 phrases: ["Cycle \(.applicationName) noise control"],
                 shortTitle: "XM4 三模式（尚未支援）",
                 systemImageName: "arrow.triangle.2.circlepath"
-            )
-        ]
+        )
     }
 }
