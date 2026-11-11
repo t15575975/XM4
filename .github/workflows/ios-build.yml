@@ -28,6 +28,10 @@ jobs:
           APP="build/DerivedData/Build/Products/Debug-iphoneos/XM4Control.app"
           test -f "$APP/Info.plist"
           test -f "$APP/XM4Control"
+          EXECUTABLE=$(/usr/libexec/PlistBuddy -c "Print :CFBundleExecutable" "$APP/Info.plist")
+          test "$EXECUTABLE" = "XM4Control"
+          test -f "$APP/$EXECUTABLE"
+          echo "Verified CFBundleExecutable: $EXECUTABLE"
           mkdir -p dist/Payload
           cp -R "$APP" dist/Payload/
           (
