@@ -32,6 +32,7 @@ final class SonyEAProbe: NSObject, ObservableObject, StreamDelegate {
     private var shortcutCompletion: ((Bool, String) -> Void)?
 
     func refresh() {
+        guard !probing else { return }
         closeSession()
         let accessories = EAAccessoryManager.shared().connectedAccessories
         var lines: [String] = ["ExternalAccessory 可見裝置：\(accessories.count)"]
