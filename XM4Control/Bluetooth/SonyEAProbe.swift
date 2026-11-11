@@ -6,6 +6,7 @@ import ExternalAccessory
 /// read-only from the user's point of view (it transmits GET 66 15 and protocol ACKs).
 /// A user-triggered one-shot cycle requires valid before and after readings.
 final class SonyEAProbe: NSObject, ObservableObject, StreamDelegate {
+    static let shared = SonyEAProbe()
     @Published private(set) var details: [String] = []
     @Published private(set) var result = "尚未檢查"
     @Published private(set) var probing = false
@@ -28,6 +29,7 @@ final class SonyEAProbe: NSObject, ObservableObject, StreamDelegate {
     private var querySent = false
     private var sequence: UInt8 = 0
     private var generation = 0
+    private var shortcutCompletion: ((Bool, String) -> Void)?
 
     func refresh() {
         closeSession()
@@ -58,8 +60,19 @@ final class SonyEAProbe: NSObject, ObservableObject, StreamDelegate {
         start(query: true)
     }
 
-    func cycleOnce() {
+    func cycleOnce(completion: ((Bool, String) -> Void)? = nil) {
+        guard !probing else {
+            completion?(false, "已有 XM4 控制操作進行中；本次未再送出指令。")
+            return
+        }
+        shortcutCompletion = completion
         start(query: true, cycle: true)
+    }
+
+    private func completeShortcut() {
+        guard let completion = shortcutCompletion else { return }
+        shortcutCompletion = nil
+        completion(verifiedCycle, result)
     }
 
     private func start(query: Bool, cycle: Bool = false) {
@@ -74,11 +87,13 @@ final class SonyEAProbe: NSObject, ObservableObject, StreamDelegate {
             return (accessory, proto)
         }).first else {
             result = "未找到 WF-1000XM4 的 Sony 協定；沒有送出指令"
+            completeShortcut()
             return
         }
         guard let opened = EASession(accessory: match.0, forProtocol: match.1),
               let input = opened.inputStream, let output = opened.outputStream else {
             result = "EASession 無法建立；沒有送出指令"
+            completeShortcut()
             return
         }
         session = opened
@@ -121,6 +136,7 @@ final class SonyEAProbe: NSObject, ObservableObject, StreamDelegate {
             } else {
                 self.result = "EASession stream 狀態：input=\(inputStatus), output=\(outputStatus)；錯誤 input=\(input.streamError?.localizedDescription ?? "none"), output=\(output.streamError?.localizedDescription ?? "none")"
             }
+            self.completeShortcut()
             self.closeSession()
         }
     }
@@ -130,12 +146,14 @@ final class SonyEAProbe: NSObject, ObservableObject, StreamDelegate {
         if eventCode.contains(.errorOccurred) {
             addTrace("Stream error: \(aStream.streamError?.localizedDescription ?? "unknown")")
             result = "串流錯誤；無法確認 ANC 狀態"
+            completeShortcut()
             closeSession()
             return
         }
         if eventCode.contains(.endEncountered) {
             addTrace("Stream ended")
-            if !receivedState { result = "耳機關閉串流，未確認 ANC 狀態" }
+            if !verifiedCycle { result = "耳機關閉串流，切換未經讀回確認" }
+            completeShortcut()
             closeSession()
             return
         }
@@ -178,7 +196,8 @@ final class SonyEAProbe: NSObject, ObservableObject, StreamDelegate {
             pending.removeFirst(count)
         } else if count < 0 {
             addTrace("TX error: \(output.streamError?.localizedDescription ?? "unknown")")
-            result = "無法傳送查詢"
+            result = "無法傳送查詢／切換指令"
+            completeShortcut()
             closeSession()
         }
     }
@@ -192,6 +211,7 @@ final class SonyEAProbe: NSObject, ObservableObject, StreamDelegate {
             if buffer.count > 4096 {
                 addTrace("RX buffer exceeded safety limit")
                 result = "收到過量資料，停止查詢"
+                completeShortcut()
                 closeSession()
                 return
             }
@@ -260,9 +280,17 @@ final class SonyEAProbe: NSObject, ObservableObject, StreamDelegate {
                         verifiedCycle = true
                         result = "三模式切換已驗證：目前 \(mode)，已收到獨立讀回。"
                         addTrace("VERIFIED mode=\(mode)")
+                        DispatchQueue.main.async { [weak self] in
+                            self?.completeShortcut()
+                            self?.closeSession()
+                        }
                     } else {
                         result = "切換未驗證：預期 \(expectedMode)，讀回 \(mode)，不重試。"
                         addTrace("READBACK MISMATCH expected=\(expectedMode) actual=\(mode)")
+                        DispatchQueue.main.async { [weak self] in
+                            self?.completeShortcut()
+                            self?.closeSession()
+                        }
                     }
                 } else if cycleRequested && expectedMode.isEmpty {
                     let next = mode == "ANC" ? "AMBIENT" : (mode == "AMBIENT" ? "OFF" : "ANC")
