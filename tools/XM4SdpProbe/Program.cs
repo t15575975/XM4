@@ -4,9 +4,11 @@ using System.Net.Sockets;
 using System.Linq;
 
 var connectMode = args.Length == 2 && args[0] == "--connect";
-if (args.Length != 0 && !connectMode)
+var nativeChannel9 = args.Length == 1 && args[0] == "--native-channel9";
+var nativeV2 = args.Length == 1 && args[0] == "--native-v2";
+if (args.Length != 0 && !connectMode && !nativeChannel9 && !nativeV2)
 {
-    Console.WriteLine("Usage: dotnet run -- [--connect <SDP-listed-service-UUID>]");
+    Console.WriteLine("Usage: dotnet run -- [--connect <SDP-listed-service-UUID> | --native-v2 | --native-channel9]");
     return;
 }
 Console.WriteLine("XM4 Bluetooth Classic SDP / RFCOMM probe");
@@ -30,6 +32,25 @@ try
         catch (Exception e)
         {
             Console.WriteLine($"SDP query failed: {e.GetType().Name}: {e.Message}");
+            continue;
+        }
+        if (nativeChannel9)
+        {
+            // WF-1000XM4 specific Linux implementation uses RFCOMM channel 9.
+            // Windows cross-platform client also tries channel 9 first as fallback.
+            NativeRfcommProbe.Connect(device.DeviceAddress.ToUInt64(), Guid.Empty, 9);
+            continue;
+        }
+        if (nativeV2)
+        {
+            // Known Sony V2 UUID from Sony Device Center; require advertisement in fresh SDP.
+            var sonyV2 = Guid.Parse("956c7b26-d49a-4ba8-b03f-b17d393cb6e2");
+            if (!services.Contains(sonyV2))
+            {
+                Console.WriteLine("Not testing Sony V2: UUID missing from fresh SDP results.");
+                continue;
+            }
+            NativeRfcommProbe.Connect(device.DeviceAddress.ToUInt64(), sonyV2, 0);
             continue;
         }
         if (!connectMode) continue;
