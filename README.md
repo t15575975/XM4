@@ -21,7 +21,7 @@ From a Windows checkout in `tools/XM4SdpProbe`, use `dotnet run -- --cycle` for 
 
 ## iOS Shortcuts and Home Screen Widget
 
-**v1.1.0:** The small and medium WidgetKit widgets have three interactive buttons **降噪 / 環境音 / 關閉**, powered by an App Intent intended to execute in the app process. Each request checks actual Sony state, sends at most one SET, and confirms with GET/readback. The widget intentionally does **not** display a claimed live ANC mode because the timeline has only the audio-route snapshot. Widget button runtime behavior still requires physical iPhone testing.
+**v1.1.0:** The small and medium WidgetKit widgets have three interactive buttons **降噪 / 環境音 / 關閉**, powered by an extension-compatible App Intent. WidgetKit normally executes these intents in its own extension process; accessing the Sony EASession from that process requires on-device validation. Each request checks actual Sony state, sends at most one SET, and confirms with GET/readback. The widget intentionally does **not** display a claimed live ANC mode because the timeline has only the audio-route snapshot. Widget button runtime behavior still requires physical iPhone testing.
 
 
 
