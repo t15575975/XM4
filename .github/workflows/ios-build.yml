@@ -5,6 +5,9 @@ on:
   push:
     branches: [ main, feature/v1.2-anc-ambient-toggle ]
 
+permissions:
+  contents: write
+
 jobs:
   build:
     runs-on: macos-15
@@ -57,3 +60,27 @@ jobs:
           path: dist/XM4Control-unsigned.ipa
           if-no-files-found: error
           retention-days: 14
+
+      - name: Publish GitHub Release v1.2.1
+        if: github.ref == 'refs/heads/feature/v1.2-anc-ambient-toggle'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          cat > dist/RELEASE_NOTES.md <<'EOF'
+          ## XM4Control v1.2.1
+
+          Based on the v1.2.0 release, with one additional Shortcuts action:
+
+          - **XM4 降噪／環境音切換** — toggles ANC ↔ AMBIENT without entering OFF. If currently OFF, the first activation enters ANC.
+          - The original **XM4 三模式循環** action remains unchanged.
+          - v1.2.0 WidgetKit controls, Sony battery probe, and other existing features are retained.
+          - Uses the actual Sony ExternalAccessory mode GET, a single SET, ACK, and independent mode readback. No automatic SET retry.
+
+          The IPA is **unsigned** and requires appropriate signing before installation on iPhone. The new two-mode Shortcut has compiled in CI but requires on-device verification.
+          EOF
+          gh release create v1.2.1 dist/XM4Control-unsigned.ipa#XM4Control-v1.2.1-UNSIGNED.ipa \
+            --target "$GITHUB_SHA" \
+            --title "XM4Control 1.2.1 — ANC / Ambient Shortcut" \
+            --notes-file dist/RELEASE_NOTES.md \
+            --latest
