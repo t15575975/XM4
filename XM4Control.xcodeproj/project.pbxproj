@@ -5,13 +5,13 @@
  objectVersion = 56;
  objects = {
   A10000000000000000000001 /* App */ = {isa = PBXGroup; children = (A10000000000000000000002, A10000000000000000000003, A10000000000000000000014, A10000000000000000000004,); sourceTree = "<group>"; };
-  A10000000000000000000002 /* App files */ = {isa = PBXGroup; path = App; sourceTree = "<group>"; children = (A10000000000000000000011, A10000000000000000000012,); };
-  A10000000000000000000003 /* Bluetooth */ = {isa = PBXGroup; path = Bluetooth; sourceTree = "<group>"; children = (A10000000000000000000013,); };
+  A10000000000000000000002 /* App files */ = {isa = PBXGroup; path = XM4Control/App; sourceTree = "<group>"; children = (A10000000000000000000011, A10000000000000000000012,); };
+  A10000000000000000000003 /* Bluetooth */ = {isa = PBXGroup; path = XM4Control/Bluetooth; sourceTree = "<group>"; children = (A10000000000000000000013,); };
   A10000000000000000000004 /* Products */ = {isa = PBXGroup; children = (A10000000000000000000021,); name = Products; sourceTree = "<group>"; };
   A10000000000000000000011 /* XM4ControlApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = XM4ControlApp.swift; sourceTree = "<group>"; };
   A10000000000000000000012 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
   A10000000000000000000013 /* BLEScanner.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BLEScanner.swift; sourceTree = "<group>"; };
-  A10000000000000000000014 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+  A10000000000000000000014 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = XM4Control/Info.plist; sourceTree = "<group>"; };
   A10000000000000000000021 /* XM4Control.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; path = XM4Control.app; sourceTree = BUILT_PRODUCTS_DIR; };
   A10000000000000000000031 /* Sources */ = {isa = PBXSourcesBuildPhase; buildActionMask = 2147483647; files = (A10000000000000000000081, A10000000000000000000082, A10000000000000000000083,); runOnlyForDeploymentPostprocessing = 0; };
   A10000000000000000000081 /* App source build file */ = {isa = PBXBuildFile; fileRef = A10000000000000000000011; };
