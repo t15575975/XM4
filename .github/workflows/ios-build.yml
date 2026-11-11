@@ -32,6 +32,15 @@ jobs:
           test "$EXECUTABLE" = "XM4Control"
           test -f "$APP/$EXECUTABLE"
           echo "Verified CFBundleExecutable: $EXECUTABLE"
+          EXT="$APP/PlugIns/XM4StatusWidget.appex"
+          test -f "$EXT/Info.plist"
+          WIDGET_EXECUTABLE=$(/usr/libexec/PlistBuddy -c "Print :CFBundleExecutable" "$EXT/Info.plist")
+          test -f "$EXT/$WIDGET_EXECUTABLE"
+          APP_VERSION=$(/usr/libexec/PlistBuddy -c "Print :CFBundleVersion" "$APP/Info.plist")
+          EXT_VERSION=$(/usr/libexec/PlistBuddy -c "Print :CFBundleVersion" "$EXT/Info.plist")
+          test "$APP_VERSION" = "$EXT_VERSION"
+          test -d "$APP/Metadata.appintents"
+          echo "Verified WidgetKit extension + AppIntents metadata; version=$APP_VERSION"
           mkdir -p dist/Payload
           cp -R "$APP" dist/Payload/
           (
@@ -39,6 +48,8 @@ jobs:
             /usr/bin/zip -q -r -X XM4Control-unsigned.ipa Payload
           )
           /usr/bin/unzip -l dist/XM4Control-unsigned.ipa | head -n 15
+          /usr/bin/unzip -Z -1 dist/XM4Control-unsigned.ipa | grep -q 'Payload/XM4Control.app/PlugIns/XM4StatusWidget.appex/XM4StatusWidget'
+          echo "Verified widget binary inside unsigned IPA"
       - name: Upload unsigned IPA
         uses: actions/upload-artifact@v4
         with:
