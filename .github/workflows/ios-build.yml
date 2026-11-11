@@ -3,7 +3,7 @@ name: iOS build (unsigned research IPA)
 on:
   workflow_dispatch:
   push:
-    branches: [ main ]
+    branches: [ main, feature/v1.2-anc-ambient-toggle ]
 
 jobs:
   build:
