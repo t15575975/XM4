@@ -19,3 +19,5 @@ jobs:
           dotnet-version: '9.0.x'
       - name: Build Windows Bluetooth probe
         run: dotnet build tools/XM4SdpProbe/XM4SdpProbe.csproj --configuration Release --nologo
+      - name: Run offline Sony framing tests
+        run: dotnet run --project tools/XM4SdpProbe/XM4SdpProbe.csproj --configuration Release --no-build -- --self-test
