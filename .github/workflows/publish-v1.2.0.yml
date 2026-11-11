@@ -1,0 +1,72 @@
+name: Publish XM4Control v1.2.0 Release
+
+# One-shot publishing workflow: only runs when this workflow is first added/edited.
+# A release tag freezes the tested source at its actual commit.
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/publish-v1.2.0.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: macos-15
+    steps:
+      - name: Checkout exact release source
+        uses: actions/checkout@v4
+
+      - name: Ensure 1.2.0 app and extension versions match
+        run: |
+          set -euo pipefail
+          /usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' XM4Control/Info.plist | grep -qx '1.2.0'
+          /usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' XM4Control/Widget/Info.plist | grep -qx '1.2.0'
+          test -s docs/HANDOFF_v1.2.0.md
+
+      - name: Build app and widget for iPhone (unsigned)
+        run: |
+          set -euo pipefail
+          xcodebuild -project XM4Control.xcodeproj -scheme XM4Control \
+            -sdk iphoneos -configuration Debug \
+            -derivedDataPath build/DerivedData \
+            CODE_SIGNING_ALLOWED=NO build
+
+      - name: Package unsigned IPA with extension
+        run: |
+          set -euo pipefail
+          APP='build/DerivedData/Build/Products/Debug-iphoneos/XM4Control.app'
+          test -f "$APP/XM4Control"
+          test -f "$APP/PlugIns/XM4StatusWidget.appex/XM4StatusWidget"
+          mkdir -p dist/Payload
+          cp -R "$APP" dist/Payload/
+          (cd dist && /usr/bin/zip -q -r -X XM4Control-v1.2.0-UNSIGNED.ipa Payload)
+          /usr/bin/unzip -Z -1 dist/XM4Control-v1.2.0-UNSIGNED.ipa | grep -q 'Payload/XM4Control.app/PlugIns/XM4StatusWidget.appex/XM4StatusWidget'
+
+      - name: Publish immutable v1.2.0 release with handoff as release notes
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          if gh release view v1.2.0 --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            echo 'Release v1.2.0 already exists; refusing to overwrite it.'
+            exit 1
+          fi
+          gh release create v1.2.0 \
+            dist/XM4Control-v1.2.0-UNSIGNED.ipa \
+            --repo "$GITHUB_REPOSITORY" \
+            --target "$GITHUB_SHA" \
+            --title 'XM4Control 1.2.0 — Battery & Connected Widget' \
+            --notes-file docs/HANDOFF_v1.2.0.md \
+            --latest=false
+
+      - name: Verify published release and tag
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          gh release view v1.2.0 --repo "$GITHUB_REPOSITORY" --json tagName,name,assets,url
+          RELEASE_SHA="$(git ls-remote --tags origin refs/tags/v1.2.0 | awk '{print $1}')"
+          test "$RELEASE_SHA" = "$GITHUB_SHA"
+          echo "Verified release v1.2.0 at $GITHUB_SHA"
