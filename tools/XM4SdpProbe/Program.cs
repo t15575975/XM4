@@ -42,8 +42,8 @@ try
         var endpoint = new BluetoothEndPoint(device.DeviceAddress, target);
         var serialized = endpoint.Serialize();
         Console.WriteLine($"Endpoint: family={endpoint.AddressFamily}; sockaddr size={serialized.Size}; service={endpoint.Service}; port={endpoint.Port}");
-        Console.WriteLine($"Socket: family={probe.Client.AddressFamily}; type={probe.Client.SocketType}; protocol={probe.Client.ProtocolType}");
         using var probe = new BluetoothClient();
+        Console.WriteLine($"Socket: family={probe.Client.AddressFamily}; type={probe.Client.SocketType}; protocol={probe.Client.ProtocolType}");
         try
         {
             // Windows Bluetooth connect can block; do not start another probe if this times out.
