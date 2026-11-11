@@ -65,7 +65,7 @@ struct ContentView: View {
                         Text(item.element).font(.caption2).textSelection(.enabled)
                     }
                     Button("複製 EA 診斷結果") {
-                        UIPasteboard.general.string = ([eaProbe.result] + eaProbe.details).joined(separator: "\\n")
+                        UIPasteboard.general.string = ([eaProbe.result] + eaProbe.details).joined(separator: "\n")
                     }
                 }
 
