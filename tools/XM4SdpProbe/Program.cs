@@ -6,20 +6,28 @@ using System.Linq;
 if (args.Length == 1 && args[0] == "--self-test")
 {
     SonyWireCodec.SelfTest();
+    NoiseState.SelfTest();
     return;
 }
 
 var connectMode = args.Length == 2 && args[0] == "--connect";
 var nativeReadAnc = args.Length == 1 && args[0] == "--native-read-anc";
+var setAnc = args.Length == 1 && args[0] == "--set-anc";
+var setAmbient = args.Length == 1 && args[0] == "--set-ambient";
+var setOff = args.Length == 1 && args[0] == "--set-off";
+var cycle = args.Length == 1 && args[0] == "--cycle";
+var controlMode = setAnc || setAmbient || setOff || cycle;
 var nativeChannel9 = args.Length == 1 && args[0] == "--native-channel9";
 var nativeV2 = args.Length == 1 && args[0] == "--native-v2";
-if (args.Length != 0 && !connectMode && !nativeChannel9 && !nativeV2 && !nativeReadAnc)
+if (args.Length != 0 && !connectMode && !nativeChannel9 && !nativeV2 && !nativeReadAnc && !controlMode)
 {
-    Console.WriteLine("Usage: dotnet run -- [--self-test | --native-read-anc | --connect <SDP-listed-service-UUID> | --native-v2 | --native-channel9]");
+    Console.WriteLine("Usage: dotnet run -- [--self-test | --native-read-anc | --set-anc | --set-ambient | --set-off | --cycle | --connect <SDP-listed-service-UUID> | --native-v2 | --native-channel9]");
     return;
 }
 Console.WriteLine("XM4 Bluetooth Classic SDP / RFCOMM probe");
-Console.WriteLine(nativeReadAnc ? "Mode: GET CURRENT ANC STATE ONLY (Sony DataMdr 66 15 + ACK); does not change ANC settings." : "No Sony commands or application data are sent.");
+Console.WriteLine(controlMode ? "Mode: EXPLICIT ANC CONTROL (reads before writing and verifies afterward)." :
+    nativeReadAnc ? "Mode: GET CURRENT ANC STATE ONLY (Sony DataMdr 66 15 + ACK); does not change ANC settings." :
+    "No Sony commands or application data are sent.");
 try
 {
     using var client = new BluetoothClient();
@@ -39,6 +47,14 @@ try
         catch (Exception e)
         {
             Console.WriteLine($"SDP query failed: {e.GetType().Name}: {e.Message}");
+            continue;
+        }
+        if (controlMode)
+        {
+            NoiseMode? target = setAnc ? NoiseMode.Anc :
+                                setAmbient ? NoiseMode.Ambient :
+                                setOff ? NoiseMode.Off : null;
+            NativeSonyControl.Set(device.DeviceAddress.ToUInt64(), target);
             continue;
         }
         if (nativeReadAnc)
