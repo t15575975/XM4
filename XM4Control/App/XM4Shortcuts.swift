@@ -1,3 +1,4 @@
+import Foundation
 import AppIntents
 
 /// This shortcut is functional. It reports iOS's *active audio output route*,
@@ -14,36 +15,37 @@ struct CheckXM4AudioRouteIntent: AppIntent {
     }
 }
 
-/// The action is intentionally exposed so it can be selected in Shortcuts
-/// when a supported iOS ANC transport exists. Today it fails explicitly
-/// rather than pretending to control Sony's RFCOMM channel from CoreBluetooth.
+/// Calls the physical Sony ExternalAccessory transport. No simulated toggling:
+/// the intent finishes successfully only after a matching 67 15 status readback.
 struct CycleXM4ModeIntent: AppIntent {
-    static var title: LocalizedStringResource = "XM4 三模式循環（iOS 控制待解鎖）"
+    static var title: LocalizedStringResource = "XM4 三模式循環"
     static var description = IntentDescription(
-        "目標：ANC → 環境音 → 關閉；目前 iOS 尚沒有已驗證的 Sony RFCOMM 控制通道。"
+        "直接控制 WF-1000XM4：ANC → 環境音 → 關閉。先讀取，再切換一次，讀回驗證；失敗不重試。"
     )
     static var openAppWhenRun: Bool = false
 
-    func perform() async throws -> some IntentResult {
-        guard XM4IOSControlTransport.isAvailable else {
-            throw XM4ShortcutError.noSupportedControlTransport
+    func perform() async throws -> some IntentResult & ReturnsValue<String> {
+        let outcome: (Bool, String) = await withCheckedContinuation { continuation in
+            DispatchQueue.main.async {
+                SonyEAProbe.shared.cycleOnce { verified, message in
+                    continuation.resume(returning: (verified, message))
+                }
+            }
         }
-        return .result()
+        guard outcome.0 else {
+            throw XM4ShortcutError.unverified(outcome.1)
+        }
+        return .result(value: outcome.1)
     }
 }
 
-enum XM4IOSControlTransport {
-    /// Do not enable until a real, validated and shippable iOS transport exists.
-    static var isAvailable: Bool { false }
-}
-
 enum XM4ShortcutError: LocalizedError {
-    case noSupportedControlTransport
+    case unverified(String)
 
     var errorDescription: String? {
         switch self {
-        case .noSupportedControlTransport:
-            return "尚無可用的 iOS Sony ANC 傳輸通道。Windows 的 RFCOMM Channel 9 控制已驗證，但 iOS 公開 CoreBluetooth API 無法直接呼叫該 RFCOMM Socket；捷徑未改變耳機模式。"
+        case .unverified(let reason):
+            return "XM4 切換未驗證：\(reason)"
         }
     }
 }
@@ -59,7 +61,7 @@ struct XM4AppShortcuts: AppShortcutsProvider {
         AppShortcut(
                 intent: CycleXM4ModeIntent(),
                 phrases: ["Cycle \(.applicationName) noise control"],
-                shortTitle: "XM4 三模式（尚未支援）",
+                shortTitle: "XM4 三模式循環",
                 systemImageName: "arrow.triangle.2.circlepath"
         )
     }
