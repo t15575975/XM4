@@ -26,3 +26,18 @@ Sonitus (https://github.com/semvis123/Sonitus) uses Apple's `ExternalAccessory` 
 - Ordinary third-party apps may be restricted from Sony's MFi protocol; listing the protocol identifiers in Info.plist does not grant authorization.
 - No outbound Sony commands are issued; this is a diagnostic only.
 - Do not use the iPhone or touch controls while riding.
+
+## 2026-11-11 confirmed iPhone test
+
+The user reported a real, stock iPhone run with:
+- `Sony's Headphones` / manufacturer Sony / model `WF-1000XM4` / connected=true.
+- `jp.co.sony.songpal.mdr.link2` among the available protocols.
+- `EASession` input and output both `NSStreamStatus(rawValue: 2)` (open); neither stream reported an error.
+
+This establishes actual app-side Sony EASession availability on this device, **not yet Sony command/response success**.
+
+## New optional read-only Sony V2 GET test
+
+The app now offers **讀取 XM4 目前 ANC 模式（不切換）**. It opens the same EASession, writes a Sony V2 `DATA_MDR` GET `66 15` frame, processes inbound Sony frames and protocol ACKs, and attempts to decode a valid `67 15` mode response (ANC / AMBIENT / OFF). It transmits **no** ANC `68 15` SET command.
+
+When connected, press the button only while stationary, then copy the ExternalAccessory diagnostic result including RX/TX trace. Verify a real `67 15` response before implementing a mode-setting action or Action Button shortcut. An open stream alone is insufficient evidence of control.
