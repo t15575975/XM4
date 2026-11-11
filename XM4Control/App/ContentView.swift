@@ -9,11 +9,11 @@ struct ContentView: View {
                 Text("XM4Control")
                     .font(.largeTitle.bold())
 
-                Text("Phase 1 · BLE discovery only")
+                Text("Phase 2 · GATT observation")
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
 
-                Text("This build does not control ANC. It only checks whether iOS can discover an advertised BLE peripheral.")
+                Text("No ANC commands are sent. This research build reads available values and subscribes to GATT notifications.")
                     .multilineTextAlignment(.center)
                     .padding(.horizontal)
 
@@ -26,7 +26,17 @@ struct ContentView: View {
                     Text(error).foregroundStyle(.red)
                 }
 
-                List(scanner.devices) { device in
+                HStack {
+                    Text("Observations: \(scanner.observations.count)")
+                    Spacer()
+                    Button("Copy log") { UIPasteboard.general.string = scanner.observations.reversed().joined(separator: "\\n") }
+                    Button("Clear") { scanner.clearObservations() }
+                }
+                .font(.caption)
+
+                List {
+                  Section("BLE devices") {
+                    ForEach(scanner.devices) { device in
                     VStack(alignment: .leading, spacing: 4) {
                         Text(device.name).font(.headline)
                         Button("Inspect GATT services") { scanner.inspect(device.id) }
@@ -42,6 +52,13 @@ struct ContentView: View {
                             .font(.caption)
                             .foregroundStyle(.secondary)
                     }
+                    }
+                  }
+                  Section("GATT observations (newest first)") {
+                    ForEach(Array(scanner.observations.enumerated()), id: \.offset) { _, observation in
+                        Text(observation).font(.caption2).textSelection(.enabled)
+                    }
+                  }
                 }
             }
             .padding()
