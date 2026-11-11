@@ -26,6 +26,7 @@ final class SonyEAProbe: NSObject, ObservableObject, StreamDelegate {
     private var verifiedCycle = false
     private var expectedMode = ""
     private var fixedTargetMode: String?
+    private var twoModeCycle = false
     private var receivedState = false
     private var querySent = false
     private var sequence: UInt8 = 0
@@ -66,6 +67,11 @@ final class SonyEAProbe: NSObject, ObservableObject, StreamDelegate {
         beginModeChange(target: nil, completion: completion)
     }
 
+    /// ANC ↔ AMBIENT only; OFF enters ANC, never stays or targets OFF.
+    func toggleANCAndAmbient(completion: ((Bool, String) -> Void)? = nil) {
+        beginModeChange(target: nil, completion: completion, twoModeOnly: true)
+    }
+
     func setMode(_ mode: String, completion: ((Bool, String) -> Void)? = nil) {
         guard ["ANC", "AMBIENT", "OFF"].contains(mode) else {
             completion?(false, "模式無效；沒有送出指令。")
@@ -74,12 +80,13 @@ final class SonyEAProbe: NSObject, ObservableObject, StreamDelegate {
         beginModeChange(target: mode, completion: completion)
     }
 
-    private func beginModeChange(target: String?, completion: ((Bool, String) -> Void)?) {
+    private func beginModeChange(target: String?, completion: ((Bool, String) -> Void)?, twoModeOnly: Bool = false) {
         guard !probing else {
             completion?(false, "已有 XM4 控制操作進行中；本次未再送出指令。")
             return
         }
         fixedTargetMode = target
+        twoModeCycle = twoModeOnly
         shortcutCompletion = completion
         start(query: true, cycle: true)
     }
@@ -126,7 +133,7 @@ final class SonyEAProbe: NSObject, ObservableObject, StreamDelegate {
         probing = true
         generation += 1
         let token = generation
-        addTrace("Protocol: \(match.1); action: \(cycle ? (fixedTargetMode ?? "ONE cycle") : (query ? "GET ANC only" : "stream-open only"))")
+        addTrace("Protocol: \(match.1); action: \(cycle ? (twoModeCycle ? "ANC AMBIENT toggle" : (fixedTargetMode ?? "ONE cycle")) : (query ? "GET ANC only" : "stream-open only"))")
 
         for stream in [input as Stream, output as Stream] {
             stream.delegate = self
@@ -308,7 +315,7 @@ final class SonyEAProbe: NSObject, ObservableObject, StreamDelegate {
                         }
                     }
                 } else if cycleRequested && expectedMode.isEmpty {
-                    let next = fixedTargetMode ?? (mode == "ANC" ? "AMBIENT" : (mode == "AMBIENT" ? "OFF" : "ANC"))
+                    let next = fixedTargetMode ?? (twoModeCycle ? (mode == "ANC" ? "AMBIENT" : "ANC") : (mode == "ANC" ? "AMBIENT" : (mode == "AMBIENT" ? "OFF" : "ANC")))
                     expectedMode = next
                     if mode == next {
                         verifiedCycle = true
