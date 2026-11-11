@@ -51,10 +51,10 @@ try
         }
         if (controlMode)
         {
-            NoiseMode? target = setAnc ? NoiseMode.Anc :
+            NoiseMode? requestedMode = setAnc ? NoiseMode.Anc :
                                 setAmbient ? NoiseMode.Ambient :
                                 setOff ? NoiseMode.Off : null;
-            NativeSonyControl.Set(device.DeviceAddress.ToUInt64(), target);
+            NativeSonyControl.Set(device.DeviceAddress.ToUInt64(), requestedMode);
             continue;
         }
         if (nativeReadAnc)
