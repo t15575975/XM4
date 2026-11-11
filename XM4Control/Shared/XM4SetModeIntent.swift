@@ -16,9 +16,9 @@ enum XM4ModeSelection: String, AppEnum {
     ]
 }
 
-// Route a WidgetKit button to the host-app process (iOS 17 compatible),
-// where the Sony EASession transport has already been physically validated.
-struct XM4SetModeIntent: ForegroundContinuableIntent {
+// WidgetKit standard AppIntent. Widget execution is normally hosted in the extension;
+// the Sony ExternalAccessory session must be validated in that process on-device.
+struct XM4SetModeIntent: AppIntent {
     static var title: LocalizedStringResource = "設定 XM4 模式"
     static var description = IntentDescription("將 WF-1000XM4 設為指定的降噪模式；先讀取、只送一次 SET、再讀回驗證。")
     static var openAppWhenRun: Bool = false
