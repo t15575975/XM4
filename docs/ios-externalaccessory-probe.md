@@ -41,3 +41,29 @@ This establishes actual app-side Sony EASession availability on this device, **n
 The app now offers **讀取 XM4 目前 ANC 模式（不切換）**. It opens the same EASession, writes a Sony V2 `DATA_MDR` GET `66 15` frame, processes inbound Sony frames and protocol ACKs, and attempts to decode a valid `67 15` mode response (ANC / AMBIENT / OFF). It transmits **no** ANC `68 15` SET command.
 
 When connected, press the button only while stationary, then copy the ExternalAccessory diagnostic result including RX/TX trace. Verify a real `67 15` response before implementing a mode-setting action or Action Button shortcut. An open stream alone is insufficient evidence of control.
+
+## 2026-11-11 iPhone GET command confirmed
+
+Physical iPhone result from WF-1000XM4:
+
+```
+Protocol: jp.co.sony.songpal.mdr.link2; action: GET ANC only
+TX: ANC GET 66 15
+RX type=01 seq=1 payload=
+RX type=0C seq=1 payload=67 15 01 01 01 02 00 14
+```
+
+The decoded state is **AMBIENT**, level **20**, wind byte **02**, voice **00**. The two streams were open and no stream errors were reported. This is validated command/response traffic on non-jailbroken iPhone.
+
+## Manual one-step cycle test — experimental, not yet iPhone verified
+
+The app includes an explicit button **手動切換 XM4 下一模式（實際變更耳機）**. This is a real mode-changing action, not a passive diagnostic.
+
+- Read a valid `67 15` current state; abort if missing/invalid.
+- Determine exactly one next mode: ANC → AMBIENT → OFF → ANC.
+- Send one `68 15` with preserved wind, voice and ambient level, based on prior Windows hardware-verified behavior.
+- Wait for Sony ACK; query `66 15` again; only report success if `67 15` readback matches target.
+- Never automatically retry SET. If timeout occurs, the device may have changed mode even without a successful readback.
+- The existing Shortcut App Intent is **still disabled** pending actual on-device SET and readback verification. No automatic cycling while riding.
+
+Perform the first manual SET test only while stationary. Copy the complete trace including before, SET, ACK, and after. The on-device mode change has **not yet been verified**, despite confirmed iOS GET access.
