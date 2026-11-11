@@ -6,14 +6,15 @@
  objects = {
   A10000000000000000000001 /* App */ = {isa = PBXGroup; children = (A10000000000000000000002, A10000000000000000000003, A10000000000000000000005, A10000000000000000000006, A10000000000000000000014, A10000000000000000000004,); sourceTree = "<group>"; };
   A10000000000000000000002 /* App files */ = {isa = PBXGroup; path = XM4Control/App; sourceTree = "<group>"; children = (A10000000000000000000011, A10000000000000000000012, A10000000000000000000015,); };
-  A10000000000000000000003 /* Bluetooth */ = {isa = PBXGroup; path = XM4Control/Bluetooth; sourceTree = "<group>"; children = (A10000000000000000000013,); };
+  A10000000000000000000003 /* Bluetooth */ = {isa = PBXGroup; path = XM4Control/Bluetooth; sourceTree = "<group>"; children = (A10000000000000000000013, A10000000000000000000019,); };
   A10000000000000000000004 /* Products */ = {isa = PBXGroup; children = (A10000000000000000000021, A10000000000000000000022,); name = Products; sourceTree = "<group>"; };
   A10000000000000000000011 /* XM4ControlApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = XM4ControlApp.swift; sourceTree = "<group>"; };
   A10000000000000000000012 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
   A10000000000000000000013 /* BLEScanner.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BLEScanner.swift; sourceTree = "<group>"; };
+  A10000000000000000000019 /* SonyEAProbe.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SonyEAProbe.swift; sourceTree = "<group>"; };
   A10000000000000000000014 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = XM4Control/Info.plist; sourceTree = "<group>"; };
   A10000000000000000000021 /* XM4Control.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; path = XM4Control.app; sourceTree = BUILT_PRODUCTS_DIR; };
-  A10000000000000000000031 /* Sources */ = {isa = PBXSourcesBuildPhase; buildActionMask = 2147483647; files = (A10000000000000000000081, A10000000000000000000082, A10000000000000000000083, A10000000000000000000084, A10000000000000000000085,); runOnlyForDeploymentPostprocessing = 0; };
+  A10000000000000000000031 /* Sources */ = {isa = PBXSourcesBuildPhase; buildActionMask = 2147483647; files = (A10000000000000000000081, A10000000000000000000082, A10000000000000000000083, A10000000000000000000084, A10000000000000000000085, A10000000000000000000089,); runOnlyForDeploymentPostprocessing = 0; };
   A10000000000000000000081 /* App source build file */ = {isa = PBXBuildFile; fileRef = A10000000000000000000011; };
   A10000000000000000000082 /* View source build file */ = {isa = PBXBuildFile; fileRef = A10000000000000000000012; };
   A10000000000000000000083 /* BLE source build file */ = {isa = PBXBuildFile; fileRef = A10000000000000000000013; };
@@ -36,6 +37,7 @@
 
   A10000000000000000000084 /* App Intents source */ = {isa = PBXBuildFile; fileRef = A10000000000000000000015; };
   A10000000000000000000085 /* App audio route source */ = {isa = PBXBuildFile; fileRef = A10000000000000000000016; };
+  A10000000000000000000089 /* Sony ExternalAccessory probe build file */ = {isa = PBXBuildFile; fileRef = A10000000000000000000019; };
   A10000000000000000000086 /* Widget audio route source */ = {isa = PBXBuildFile; fileRef = A10000000000000000000016; };
   A10000000000000000000087 /* Widget source */ = {isa = PBXBuildFile; fileRef = A10000000000000000000017; };
   A10000000000000000000088 /* Embed widget */ = {isa = PBXBuildFile; fileRef = A10000000000000000000022; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
