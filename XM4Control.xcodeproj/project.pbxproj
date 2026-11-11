@@ -27,7 +27,7 @@
   A10000000000000000000071 /* Target Debug */ = {isa = XCBuildConfiguration; buildSettings = {ASSETCATALOG_COMPILER_APPICON_NAME = ""; CODE_SIGNING_ALLOWED = NO; GENERATE_INFOPLIST_FILE = NO; INFOPLIST_FILE = XM4Control/Info.plist; IPHONEOS_DEPLOYMENT_TARGET = 16.0; PRODUCT_BUNDLE_IDENTIFIER = com.example.XM4Control; PRODUCT_NAME = "$(TARGET_NAME)"; SDKROOT = iphoneos; SWIFT_VERSION = 5.0; TARGETED_DEVICE_FAMILY = "1,2";}; name = Debug; };
   A10000000000000000000072 /* Project Debug */ = {isa = XCBuildConfiguration; buildSettings = {IPHONEOS_DEPLOYMENT_TARGET = 16.0; SDKROOT = iphoneos; SWIFT_VERSION = 5.0;}; name = Debug; };
   A10000000000000000000005 /* Shared source group */ = {isa = PBXGroup; path = XM4Control/Shared; sourceTree = "<group>"; children = (A10000000000000000000016, A100000000000000000000A0,); };
-  A10000000000000000000006 /* Widget group */ = {isa = PBXGroup; path = XM4Control/Widget; sourceTree = "<group>"; children = (A10000000000000000000017, A10000000000000000000018,); };
+  A10000000000000000000006 /* Widget group */ = {isa = PBXGroup; path = XM4Control/Widget; sourceTree = "<group>"; children = (A10000000000000000000017, A10000000000000000000018, A100000000000000000000B0,); };
 
   A100000000000000000000A0 /* XM4SetModeIntent.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = XM4SetModeIntent.swift; sourceTree = "<group>"; };
   A100000000000000000000A1 /* App mode intent */ = {isa = PBXBuildFile; fileRef = A100000000000000000000A0; };
@@ -35,6 +35,8 @@
   A100000000000000000000A3 /* Widget Sony EA transport */ = {isa = PBXBuildFile; fileRef = A10000000000000000000019; };
   A10000000000000000000015 /* XM4Shortcuts.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = XM4Shortcuts.swift; sourceTree = "<group>"; };
   A10000000000000000000016 /* XM4AudioRoute.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = XM4AudioRoute.swift; sourceTree = "<group>"; };
+  A100000000000000000000B0 /* XM4BatteryReader.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = XM4BatteryReader.swift; sourceTree = "<group>"; };
+  A100000000000000000000B1 /* Widget battery reader build file */ = {isa = PBXBuildFile; fileRef = A100000000000000000000B0; };
   A10000000000000000000017 /* XM4StatusWidget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = XM4StatusWidget.swift; sourceTree = "<group>"; };
   A10000000000000000000018 /* Widget Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
   A10000000000000000000022 /* XM4StatusWidget.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; path = XM4StatusWidget.appex; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -46,7 +48,7 @@
   A10000000000000000000087 /* Widget source */ = {isa = PBXBuildFile; fileRef = A10000000000000000000017; };
   A10000000000000000000088 /* Embed widget */ = {isa = PBXBuildFile; fileRef = A10000000000000000000022; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 
-  A10000000000000000000034 /* Widget sources */ = {isa = PBXSourcesBuildPhase; buildActionMask = 2147483647; files = (A10000000000000000000086, A10000000000000000000087, A100000000000000000000A2, A100000000000000000000A3,); runOnlyForDeploymentPostprocessing = 0; };
+  A10000000000000000000034 /* Widget sources */ = {isa = PBXSourcesBuildPhase; buildActionMask = 2147483647; files = (A10000000000000000000086, A10000000000000000000087, A100000000000000000000A2, A100000000000000000000A3, A100000000000000000000B1,); runOnlyForDeploymentPostprocessing = 0; };
   A10000000000000000000035 /* Widget frameworks */ = {isa = PBXFrameworksBuildPhase; buildActionMask = 2147483647; files = (); runOnlyForDeploymentPostprocessing = 0; };
   A10000000000000000000036 /* Widget resources */ = {isa = PBXResourcesBuildPhase; buildActionMask = 2147483647; files = (); runOnlyForDeploymentPostprocessing = 0; };
   A10000000000000000000037 /* Embed App Extensions */ = {isa = PBXCopyFilesBuildPhase; buildActionMask = 2147483647; dstPath = ""; dstSubfolderSpec = 13; files = (A10000000000000000000088,); name = "Embed App Extensions"; runOnlyForDeploymentPostprocessing = 0; };
