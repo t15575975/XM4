@@ -2,6 +2,47 @@
 
 Status: **Windows RFCOMM channel 9 AND Sony V2 ANC state read confirmed on actual WF-1000XM4 firmware 2.3.1; write commands not yet validated on device** (2026-11-11).
 
+## 2026-11-11: First hardware-confirmed ANC mode change
+
+The user confirmed the WF-1000XM4 **actually changed from AMBIENT to OFF** using the repository's Windows native control command:
+
+```powershell
+dotnet run -- --set-off
+```
+
+Actual Sony V2 protocol exchange (simplified, retaining essential bytes):
+
+```text
+ANC STATE READ: Ambient; wind=0x02, voice=0, level=20
+Requesting: Ambient -> Off; preserving wind=0x02 voice=0 level=20.
+ANC SET payload: 6815010000020014
+TX: type=0C, seq=1, payload=6815010000020014
+SET ACK received.
+RX: type=0C, seq=1, payload=6915010000020014
+RX: type=0C, seq=0, payload=6715010000020014
+ANC STATE READ: Off; wind=0x02, voice=0, level=20
+MODE CHANGE VERIFIED: Ambient -> Off
+```
+
+Evidence scope:
+- Both the wearer and the post-write `67 15` status query confirmed OFF.
+- This confirms the Windows socket transport, V2 `0x15` packet encoding, state-change acknowledgement, and successful **AMBIENT -> OFF** operation on WF-1000XM4 firmware 2.3.1.
+- `OFF -> ANC`, `ANC -> AMBIENT`, and the full `--cycle` sequence remain **untested**.
+- iPhone direct RFCOMM/Action Button access remains **unproven**. The successful Windows result alone does not prove an iOS-only solution.
+
+Recommended *stationary* next smoke test, beginning from OFF:
+
+```powershell
+cd F:\上傳作業區\XM4
+git pull
+cd tools\XM4SdpProbe
+dotnet run -- --cycle  # expected OFF -> ANC
+dotnet run -- --cycle  # expected ANC -> AMBIENT
+dotnet run -- --cycle  # expected AMBIENT -> OFF
+```
+
+Each cycle step reads the real mode, writes once, and verifies the readback. Stop at the first failed step; do not run the remaining steps when any `MODE CHANGE VERIFIED` is missing.
+
 ## Actual user observations
 
 - Windows 10.0.19045, .NET 9 runtime; WF-1000XM4 (firmware 2.3.1) paired and connected.
