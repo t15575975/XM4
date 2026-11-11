@@ -1,4 +1,4 @@
-name: iOS build (unsigned research artifact)
+name: iOS build (unsigned research IPA)
 
 on:
   workflow_dispatch:
@@ -22,8 +22,23 @@ jobs:
             -derivedDataPath build/DerivedData \
             CODE_SIGNING_ALLOWED=NO \
             build
-      - name: Upload app bundle for inspection
+      - name: Package unsigned IPA for local signing
+        run: |
+          set -euo pipefail
+          APP="build/DerivedData/Build/Products/Debug-iphoneos/XM4Control.app"
+          test -f "$APP/Info.plist"
+          test -f "$APP/XM4Control"
+          mkdir -p dist/Payload
+          cp -R "$APP" dist/Payload/
+          (
+            cd dist
+            /usr/bin/zip -q -r -X XM4Control-unsigned.ipa Payload
+          )
+          /usr/bin/unzip -l dist/XM4Control-unsigned.ipa | head -n 15
+      - name: Upload unsigned IPA
         uses: actions/upload-artifact@v4
         with:
-          name: XM4Control-unsigned-app
-          path: build/DerivedData/Build/Products/Debug-iphoneos/XM4Control.app
+          name: XM4Control-unsigned-ipa
+          path: dist/XM4Control-unsigned.ipa
+          if-no-files-found: error
+          retention-days: 14
