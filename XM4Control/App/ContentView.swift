@@ -55,8 +55,8 @@ struct ContentView: View {
                     }
                   }
                   Section("GATT observations (newest first)") {
-                    ForEach(Array(scanner.observations.enumerated()), id: \.offset) { _, observation in
-                        Text(observation).font(.caption2).textSelection(.enabled)
+                    ForEach(Array(scanner.observations.enumerated()), id: \.offset) { entry in
+                        Text(entry.element).font(.caption2).textSelection(.enabled)
                     }
                   }
                 }
