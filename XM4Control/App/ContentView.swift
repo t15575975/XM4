@@ -50,12 +50,16 @@ struct ContentView: View {
                 }
 
                 Section("Sony ExternalAccessory 診斷") {
-                    Text("讀取 iOS 可見的外部配件與 Sony 協定。僅在你按下測試按鈕時嘗試開啟 EASession，不傳送任何耳機控制封包。")
+                    Text("已確認 iPhone 可開啟 Sony EASession。讀取 ANC 狀態會傳送唯讀 GET 66 15 與必要協定 ACK，但不會送出切換模式的 SET 指令。")
                         .font(.caption)
                         .foregroundStyle(.secondary)
                     Button("重新搜尋 ExternalAccessory") { eaProbe.refresh() }
                     Button(eaProbe.probing ? "測試進行中" : "測試 Sony EASession 開啟") {
                         eaProbe.testSession()
+                    }
+                    .disabled(eaProbe.probing)
+                    Button(eaProbe.probing ? "查詢進行中" : "讀取 XM4 目前 ANC 模式（不切換）") {
+                        eaProbe.readANC()
                     }
                     .disabled(eaProbe.probing)
                     Text(eaProbe.result)
@@ -64,8 +68,11 @@ struct ContentView: View {
                     ForEach(Array(eaProbe.details.enumerated()), id: \.offset) { item in
                         Text(item.element).font(.caption2).textSelection(.enabled)
                     }
+                    ForEach(Array(eaProbe.trace.enumerated()), id: \.offset) { item in
+                        Text(item.element).font(.caption2).textSelection(.enabled)
+                    }
                     Button("複製 EA 診斷結果") {
-                        UIPasteboard.general.string = ([eaProbe.result] + eaProbe.details).joined(separator: "\n")
+                        UIPasteboard.general.string = ([eaProbe.result] + eaProbe.details + eaProbe.trace).joined(separator: "\n")
                     }
                 }
 
