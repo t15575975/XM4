@@ -66,6 +66,16 @@ struct ContentView: View {
                         eaProbe.cycleOnce()
                     }
                     .disabled(eaProbe.probing)
+                    HStack(spacing: 8) {
+                        Button("降噪") { eaProbe.setMode("ANC") }
+                        Button("環境音") { eaProbe.setMode("AMBIENT") }
+                        Button("關閉") { eaProbe.setMode("OFF") }
+                    }
+                    .buttonStyle(.bordered)
+                    .disabled(eaProbe.probing)
+                    Text("上方三個按鈕直接指定模式，與 Widget 使用相同讀取／單次設定／讀回驗證流程。")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
                     Text("只在靜止且安全的環境測試。每次按下只進行一次 ANC → 環境音 → 關閉 → ANC，先讀取模式並讀回驗證；失敗不自動重試。")
                         .font(.caption)
                         .foregroundStyle(.secondary)
