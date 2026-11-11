@@ -3,16 +3,23 @@ using InTheHand.Net;
 using System.Net.Sockets;
 using System.Linq;
 
+if (args.Length == 1 && args[0] == "--self-test")
+{
+    SonyWireCodec.SelfTest();
+    return;
+}
+
 var connectMode = args.Length == 2 && args[0] == "--connect";
+var nativeReadAnc = args.Length == 1 && args[0] == "--native-read-anc";
 var nativeChannel9 = args.Length == 1 && args[0] == "--native-channel9";
 var nativeV2 = args.Length == 1 && args[0] == "--native-v2";
-if (args.Length != 0 && !connectMode && !nativeChannel9 && !nativeV2)
+if (args.Length != 0 && !connectMode && !nativeChannel9 && !nativeV2 && !nativeReadAnc)
 {
-    Console.WriteLine("Usage: dotnet run -- [--connect <SDP-listed-service-UUID> | --native-v2 | --native-channel9]");
+    Console.WriteLine("Usage: dotnet run -- [--self-test | --native-read-anc | --connect <SDP-listed-service-UUID> | --native-v2 | --native-channel9]");
     return;
 }
 Console.WriteLine("XM4 Bluetooth Classic SDP / RFCOMM probe");
-Console.WriteLine("No Sony commands or application data are sent.");
+Console.WriteLine(nativeReadAnc ? "Mode: GET CURRENT ANC STATE ONLY (Sony DataMdr 66 15 + ACK); does not change ANC settings." : "No Sony commands or application data are sent.");
 try
 {
     using var client = new BluetoothClient();
@@ -32,6 +39,11 @@ try
         catch (Exception e)
         {
             Console.WriteLine($"SDP query failed: {e.GetType().Name}: {e.Message}");
+            continue;
+        }
+        if (nativeReadAnc)
+        {
+            NativeSonyRead.QueryNoiseControl(device.DeviceAddress.ToUInt64());
             continue;
         }
         if (nativeChannel9)
