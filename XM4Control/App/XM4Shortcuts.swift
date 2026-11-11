@@ -15,6 +15,24 @@ struct CheckXM4AudioRouteIntent: AppIntent {
     }
 }
 
+
+/// Exact Sony ExternalAccessory connection, not the active audio output route.
+/// Intended for Shortcuts "If" so the disconnected branch can toggle iOS Silent Mode.
+struct CheckXM4AccessoryConnectedIntent: AppIntent {
+    static var title: LocalizedStringResource = "檢查 XM4 是否已連線"
+    static var description = IntentDescription(
+        "確認 WF-1000XM4 正透過 Sony ExternalAccessory link2 連線。回傳布林值供捷徑 If 使用。"
+    )
+    static var openAppWhenRun: Bool = false
+
+    func perform() async throws -> some IntentResult & ReturnsValue<Bool> {
+        let connected = await MainActor.run {
+            SonyEAProbe.isConnectedXM4()
+        }
+        return .result(value: connected)
+    }
+}
+
 /// Calls the physical Sony ExternalAccessory transport. No simulated toggling:
 /// the intent finishes successfully only after a matching 67 15 status readback.
 struct CycleXM4ModeIntent: AppIntent {
@@ -57,6 +75,12 @@ struct XM4AppShortcuts: AppShortcutsProvider {
                 phrases: ["Check \(.applicationName) audio output"],
                 shortTitle: "XM4 音訊狀態",
                 systemImageName: "headphones"
+        )
+        AppShortcut(
+                intent: CheckXM4AccessoryConnectedIntent(),
+                phrases: ["Check \\(.applicationName) Sony connection"],
+                shortTitle: "XM4 是否已連線",
+                systemImageName: "headphones.circle"
         )
         AppShortcut(
                 intent: CycleXM4ModeIntent(),
