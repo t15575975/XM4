@@ -13,6 +13,16 @@ final class BLEScanner: NSObject, ObservableObject {
     @Published private(set) var devices: [DiscoveredDevice] = []
     @Published private(set) var isScanning = false
     @Published var errorMessage: String?
+    @Published private(set) var observations: [String] = []
+    @Published private(set) var connectedDeviceID: UUID?
+
+    private func record(_ message: String) {
+        let stamp = DateFormatter.localizedString(from: Date(), dateStyle: .none, timeStyle: .medium)
+        observations.insert("[\(stamp)] \(message)", at: 0)
+        if observations.count > 250 { observations.removeLast(observations.count - 250) }
+    }
+
+    func clearObservations() { observations.removeAll() }
 
     private var central: CBCentralManager!
     private var peripherals: [UUID: CBPeripheral] = [:]
@@ -29,6 +39,7 @@ final class BLEScanner: NSObject, ObservableObject {
         }
         devices.removeAll()
         peripherals.removeAll()
+        observations.removeAll()
         errorMessage = nil
         isScanning = true
         central.scanForPeripherals(withServices: nil,
@@ -45,6 +56,7 @@ final class BLEScanner: NSObject, ObservableObject {
         stop()
         peripheral.delegate = self
         errorMessage = "Connecting to \(peripheral.name ?? "BLE device")…"
+        record("Connecting to \(peripheral.name ?? peripheral.identifier.uuidString)")
         central.connect(peripheral, options: nil)
     }
 
@@ -84,7 +96,9 @@ extension BLEScanner: @preconcurrency CBCentralManagerDelegate {
     }
 
     func centralManager(_ central: CBCentralManager, didConnect peripheral: CBPeripheral) {
+        connectedDeviceID = peripheral.identifier
         errorMessage = "Connected. Discovering GATT services…"
+        record("Connected: \(peripheral.name ?? "device")")
         peripheral.discoverServices(nil)
     }
 
@@ -93,7 +107,9 @@ extension BLEScanner: @preconcurrency CBCentralManagerDelegate {
     }
 
     func centralManager(_ central: CBCentralManager, didDisconnectPeripheral peripheral: CBPeripheral, error: Error?) {
+        connectedDeviceID = nil
         errorMessage = "Disconnected: \(error?.localizedDescription ?? "normal")"
+        record("Disconnected")
     }
 }
 
@@ -106,6 +122,7 @@ extension BLEScanner: @preconcurrency CBPeripheralDelegate {
         let services = peripheral.services ?? []
         errorMessage = "Found \(services.count) GATT service(s)."
         for service in services {
+            record("Service \(service.uuid.uuidString)")
             addDetail("Service: \(service.uuid.uuidString)", to: peripheral.identifier)
             peripheral.discoverCharacteristics(nil, for: service)
         }
@@ -117,8 +134,33 @@ extension BLEScanner: @preconcurrency CBPeripheralDelegate {
             return
         }
         for characteristic in service.characteristics ?? [] {
+            record("Characteristic \(service.uuid.uuidString) / \(characteristic.uuid.uuidString) props=\(characteristic.properties.rawValue)")
+            if characteristic.properties.contains(.read) {
+                peripheral.readValue(for: characteristic)
+            }
+            if characteristic.properties.contains(.notify) || characteristic.properties.contains(.indicate) {
+                peripheral.setNotifyValue(true, for: characteristic)
+            }
             addDetail("Characteristic: \(characteristic.uuid.uuidString), properties: \(characteristic.properties.rawValue)",
                       to: peripheral.identifier)
         }
     }
+    func peripheral(_ peripheral: CBPeripheral, didUpdateValueFor characteristic: CBCharacteristic, error: Error?) {
+        let service = characteristic.service?.uuid.uuidString ?? "unknown"
+        if let error = error {
+            record("Read/notify error \(characteristic.uuid.uuidString): \(error.localizedDescription)")
+            return
+        }
+        let hex = (characteristic.value ?? Data()).map { String(format: "%02X", $0) }.joined(separator: " ")
+        record("Value \(service) / \(characteristic.uuid.uuidString): \(hex.isEmpty ? "(empty)" : hex)")
+    }
+
+    func peripheral(_ peripheral: CBPeripheral, didUpdateNotificationStateFor characteristic: CBCharacteristic, error: Error?) {
+        if let error = error {
+            record("Notify error \(characteristic.uuid.uuidString): \(error.localizedDescription)")
+        } else {
+            record("Notify \(characteristic.uuid.uuidString): \(characteristic.isNotifying ? "on" : "off")")
+        }
+    }
+
 }
