@@ -45,3 +45,34 @@ Test only one method at a time. Closing a connection is the only intended side e
 ## iOS feasibility constraint
 
 Passing these Windows tests will not grant a third-party iOS app general-purpose Bluetooth Classic RFCOMM access. iOS CoreBluetooth targets BLE. ExternalAccessory requires a supported accessory protocol. The iPhone-only, no-extra-hardware three-mode Action Button goal remains **unproven**; do not claim a working IPA until a valid on-device control path is shown.
+
+
+## 2026-11-11: Transport milestone and read-only ANC interrogation
+
+User ran `dotnet run -- --native-channel9` on Windows 10.0.19045 and got:
+
+```text
+Connect target: service=00000000-0000-0000-0000-000000000000, channel=9
+NATIVE CONNECTED: Success. Closing without sending data.
+```
+
+This validates **RFCOMM channel 9 connection**, not Sony control-protocol behavior.
+
+Source cross-check before attempting any ANC changes:
+- [Sony Device Center ProtocolV2](https://github.com/marconvcm/sony-device-center/blob/main/libs/sony-protocol/src/ProtocolV2.cpp): WF-1000XM4 noise-control GET request `66 15`, status `67 15`. No write command needed for the current-mode query.
+- [Sony Device Center NoiseControlCodec](https://github.com/marconvcm/sony-device-center/blob/main/libs/sony-protocol/src/NoiseControlCodec.h): strict layout `[67,15,01,enabled,ambient,wind,voice,level]`; enabled=0 is OFF, enabled=1 and ambient=0 is ANC, enabled=1 and ambient=1 is AMBIENT.
+- [Sony Device Center FrameCodec](https://github.com/marconvcm/sony-device-center/blob/main/libs/sony-protocol/src/FrameCodec.cpp): `>`/ `<` framing, escaping 0x3c/0x3d/0x3e, 1-byte seq, 4-byte big-endian length, wrapped checksum.
+- [Sony Device Center SonyProtocolSession](https://github.com/marconvcm/sony-device-center/blob/main/libs/sony-protocol/src/SonyProtocolSession.cpp): ACK received DATA_MDR with opposite sequence parity.
+
+The optional `--native-read-anc` command sends **only the GET query `66 15`** plus required ACK frames to the established channel 9. This is a read-only state query, not a zero-byte probe; there can still be unexpected firmware behavior, so verify while stationary.
+
+```powershell
+cd F:\上傳作業區\XM4
+git pull
+cd tools\XM4SdpProbe
+dotnet run -- --native-read-anc
+```
+
+Expected successful result: `ANC STATE CONFIRMED: OFF`, `ANC STATE CONFIRMED: ANC`, or `ANC STATE CONFIRMED: AMBIENT`, based on a valid 8-byte `67 15` response. This has **not yet been tested on the user's earbuds**.
+
+Offline transport codec tests are run by Windows CI and can be run using `dotnet run -- --self-test`. **Do not proceed to ANC writes before validating this GET response.**
