@@ -5,24 +5,54 @@ import AppIntents
 struct XM4StatusEntry: TimelineEntry {
     let date: Date
     let audio: XM4AudioSnapshot
+    let isConnected: Bool
+    let battery: XM4BatteryReading
 }
 
 struct XM4WidgetProvider: TimelineProvider {
     func placeholder(in context: Context) -> XM4StatusEntry {
         let now = Date()
         return XM4StatusEntry(date: now,
-            audio: XM4AudioSnapshot(checkedAt: now, isXM4AudioOutput: false, outputNames: []))
+            audio: XM4AudioSnapshot(checkedAt: now, isXM4AudioOutput: false, outputNames: []),
+            isConnected: false, battery: .unavailable)
     }
 
     func getSnapshot(in context: Context, completion: @escaping (XM4StatusEntry) -> Void) {
-        let snap = XM4AudioRoute.snapshot()
-        completion(XM4StatusEntry(date: snap.checkedAt, audio: snap))
+        // Gallery preview never opens a Sony control session.
+        if context.isPreview {
+            let snap = XM4AudioRoute.snapshot()
+            completion(XM4StatusEntry(date: snap.checkedAt, audio: snap,
+                                      isConnected: false, battery: .unavailable))
+        } else {
+            fetchStatus(completion: completion)
+        }
     }
 
     func getTimeline(in context: Context, completion: @escaping (Timeline<XM4StatusEntry>) -> Void) {
-        let snap = XM4AudioRoute.snapshot()
-        completion(Timeline(entries: [XM4StatusEntry(date: snap.checkedAt, audio: snap)],
-                            policy: .after(Date().addingTimeInterval(15 * 60))))
+        fetchStatus { entry in
+            // A preferred refresh interval, not a real-time or guaranteed timer.
+            completion(Timeline(entries: [entry], policy: .after(Date().addingTimeInterval(15 * 60))))
+        }
+    }
+
+    private func fetchStatus(completion: @escaping (XM4StatusEntry) -> Void) {
+        DispatchQueue.main.async {
+            let audio = XM4AudioRoute.snapshot()
+            let connected = XM4AccessoryStatus.connected()
+            guard connected else {
+                completion(XM4StatusEntry(date: Date(), audio: audio,
+                                          isConnected: false, battery: .unavailable))
+                return
+            }
+            let reader = XM4BatteryReader()
+            reader.read { battery in
+                // Do not show controls if disconnected while the battery query ran.
+                let stillConnected = XM4AccessoryStatus.connected()
+                completion(XM4StatusEntry(date: Date(), audio: audio,
+                    isConnected: stillConnected,
+                    battery: stillConnected ? battery : .unavailable))
+            }
+        }
     }
 }
 
@@ -60,34 +90,61 @@ struct XM4StatusWidgetView: View {
     let entry: XM4StatusEntry
     @Environment(\.widgetFamily) private var family
 
+    private func percent(_ value: Int?) -> String {
+        guard let value else { return "--" }
+        return "\(value)%"
+    }
+
+    private func batteryCell(_ name: String, value: Int?, symbol: String) -> some View {
+        VStack(spacing: 2) {
+            Label(name, systemImage: symbol)
+                .font(.caption2)
+                .lineLimit(1)
+                .minimumScaleFactor(0.8)
+            Text(percent(value))
+                .font(.system(.caption, design: .rounded, weight: .bold))
+                .monospacedDigit()
+        }
+        .frame(maxWidth: .infinity)
+    }
+
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
+        VStack(alignment: .leading, spacing: family == .systemSmall ? 5 : 9) {
             HStack(spacing: 6) {
                 Image(systemName: "headphones")
-                    .foregroundStyle(entry.audio.isXM4AudioOutput ? .green : .secondary)
+                    .foregroundStyle(entry.isConnected ? .green : .secondary)
                 Text("WF-1000XM4")
                     .font(.headline)
                     .lineLimit(1)
             }
-            Text(entry.audio.isXM4AudioOutput ? "iPhone 音訊輸出中" : "未作為音訊輸出")
+            Text(entry.isConnected ? "已連線" : "未連線")
                 .font(.caption)
-                .foregroundStyle(.secondary)
-                .lineLimit(1)
+                .foregroundStyle(entry.isConnected ? .green : .secondary)
 
-            Spacer(minLength: 0)
-            XM4ModeButtons()
-            Spacer(minLength: 0)
-
-            if family == .systemMedium {
-                Text("點按後由耳機讀回確認；Widget 不顯示即時 ANC 狀態")
-                    .font(.caption2)
-                    .foregroundStyle(.secondary)
-                    .lineLimit(2)
+            if entry.isConnected {
+                HStack(spacing: 4) {
+                    batteryCell("左耳", value: entry.battery.left, symbol: "ear")
+                    batteryCell("右耳", value: entry.battery.right, symbol: "ear")
+                    batteryCell("充電盒", value: entry.battery.caseLevel, symbol: "battery.50percent")
+                }
+                Spacer(minLength: 0)
+                XM4ModeButtons()
             } else {
-                Text("直接設定模式")
+                Spacer(minLength: 0)
+                Label("連線後顯示電量與模式控制", systemImage: "wifi.slash")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+                Spacer(minLength: 0)
+            }
+            if family == .systemMedium {
+                Text("電量為最近查詢結果；未取得顯示 --")
                     .font(.caption2)
                     .foregroundStyle(.secondary)
             }
+            Text("更新：\(entry.date.formatted(date: .omitted, time: .shortened))")
+                .font(.caption2)
+                .foregroundStyle(.secondary)
         }
         .containerBackground(.fill.tertiary, for: .widget)
     }
@@ -101,7 +158,7 @@ struct XM4StatusWidget: Widget {
             XM4StatusWidgetView(entry: entry)
         }
         .configurationDisplayName("XM4 三模式控制")
-        .description("直接設定 WF-1000XM4 降噪／環境音／關閉；使用 Sony ExternalAccessory 指令與讀回驗證。")
+        .description("連線時顯示左右耳／充電盒電量與三模式按鈕；斷線時自動隱藏按鈕。")
         .supportedFamilies([.systemSmall, .systemMedium])
     }
 }
