@@ -7,6 +7,16 @@ import ExternalAccessory
 /// A user-triggered one-shot cycle requires valid before and after readings.
 final class SonyEAProbe: NSObject, ObservableObject, StreamDelegate {
     static let shared = SonyEAProbe()
+
+    /// Exact physical Sony control connection; an inactive iPhone audio route
+    /// does not mean the headset is disconnected.
+    static func isConnectedXM4() -> Bool {
+        EAAccessoryManager.shared().connectedAccessories.contains { accessory in
+            accessory.isConnected &&
+            accessory.modelNumber == "WF-1000XM4" &&
+            accessory.protocolStrings.contains("jp.co.sony.songpal.mdr.link2")
+        }
+    }
     @Published private(set) var details: [String] = []
     @Published private(set) var result = "尚未檢查"
     @Published private(set) var probing = false
