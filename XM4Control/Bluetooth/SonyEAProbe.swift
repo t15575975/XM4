@@ -235,7 +235,7 @@ final class SonyEAProbe: NSObject, ObservableObject, StreamDelegate {
     }
 
     private func encode(type: UInt8, sequence: UInt8, payload: [UInt8]) -> [UInt8] {
-        var body: [UInt8] = [type, sequence, 0, 0, 0, 0, UInt8(payload.count)]
+        var body: [UInt8] = [type, sequence, 0, 0, 0, UInt8(payload.count)]
         body.append(contentsOf: payload)
         body.append(body.reduce(UInt8(0)) { $0 &+ $1 })
         var frame: [UInt8] = [0x3E]
