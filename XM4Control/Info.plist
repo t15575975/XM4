@@ -20,6 +20,11 @@
     <true/>
     <key>NSBluetoothAlwaysUsageDescription</key>
     <string>XM4Control uses Bluetooth to investigate whether your Sony earbuds expose a supported control service.</string>
+    <key>UISupportedExternalAccessoryProtocols</key>
+    <array>
+        <string>jp.co.sony.songpal.mdr.link</string>
+        <string>jp.co.sony.songpal.mdr.link2</string>
+    </array>
     <key>UILaunchScreen</key>
     <dict/>
 </dict>
