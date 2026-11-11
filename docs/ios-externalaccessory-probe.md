@@ -67,3 +67,29 @@ The app includes an explicit button **手動切換 XM4 下一模式（實際變�
 - The existing Shortcut App Intent is **still disabled** pending actual on-device SET and readback verification. No automatic cycling while riding.
 
 Perform the first manual SET test only while stationary. Copy the complete trace including before, SET, ACK, and after. The on-device mode change has **not yet been verified**, despite confirmed iOS GET access.
+
+## 2026-11-11 stock iPhone mode change confirmed (ANC to AMBIENT)
+
+User-supplied real-device trace:
+
+```
+TX: ANC GET 66 15
+RX type=0C seq=1 payload=67 15 01 01 00 02 00 14
+BEFORE ANC; SET AMBIENT; wind=2 voice=0 level=20
+RX type=01 seq=0 payload=
+SET ACK; querying independent readback
+TX: ANC GET 66 15 (readback)
+RX type=0C seq=0 payload=69 15 01 01 01 02 00 14
+RX type=0C seq=1 payload=67 15 01 01 01 02 00 14
+VERIFIED mode=AMBIENT
+```
+
+This independently confirms **ANC → AMBIENT** via stock iPhone, not merely protocol visibility. The opposite direction and OFF transitions remain to be checked on the iPhone.
+
+## Shortcut / Action Button implementation (device verification pending)
+
+The app's `CycleXM4ModeIntent` now invokes `SonyEAProbe.shared.cycleOnce` with an asynchronous completion callback. It only returns success if a subsequent `67 15` matches the target state. On failed transmission, stream errors, timeout, or an unexpected state, it returns an error and does not retry the SET command.
+
+The intent declares `openAppWhenRun = false`, but that **does not yet prove** the iOS system can keep the ExternalAccessory session alive while running via Shortcuts or the Action Button, or that the action works while the phone is locked. Test while stationary, first with the phone unlocked. When iOS presents a stale shortcut label, delete and add the action again after installing the latest signed build.
+
+Do not claim all three physical transitions are proven based on this one successful ANC → AMBIENT trace.
