@@ -1,0 +1,21 @@
+name: Windows RFCOMM Probe Build
+
+on:
+  push:
+    paths:
+      - "tools/XM4SdpProbe/**"
+      - ".github/workflows/windows-rfcomm-build.yml"
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup .NET 9
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '9.0.x'
+      - name: Build Windows Bluetooth probe
+        run: dotnet build tools/XM4SdpProbe/XM4SdpProbe.csproj --configuration Release --nologo
