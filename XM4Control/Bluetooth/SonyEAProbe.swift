@@ -2,18 +2,27 @@ import Foundation
 import Combine
 import ExternalAccessory
 
-/// Passive ExternalAccessory discovery plus an explicitly requested stream-open test.
-/// No data is written to Sony accessories. MFi eligibility is NOT implied by discovery.
-final class SonyEAProbe: ObservableObject {
+/// Sony EASession research. Scanning is passive; the optional status request is
+/// read-only from the user's point of view (it transmits GET 66 15 and protocol ACKs).
+/// No ANC SET 68 15 commands are implemented here.
+final class SonyEAProbe: NSObject, ObservableObject, StreamDelegate {
     @Published private(set) var details: [String] = []
     @Published private(set) var result = "尚未檢查"
     @Published private(set) var probing = false
+    @Published private(set) var trace: [String] = []
 
     private let sonyProtocols = [
-        "jp.co.sony.songpal.mdr.link",
-        "jp.co.sony.songpal.mdr.link2"
+        "jp.co.sony.songpal.mdr.link2",
+        "jp.co.sony.songpal.mdr.link"
     ]
     private var session: EASession?
+    private var buffer = [UInt8]()
+    private var pending = [UInt8]()
+    private var readOnlyQuery = false
+    private var receivedState = false
+    private var querySent = false
+    private var sequence: UInt8 = 0
+    private var generation = 0
 
     func refresh() {
         closeSession()
@@ -28,56 +37,237 @@ final class SonyEAProbe: ObservableObject {
             lines.append("---")
         }
         details = lines
-        let sony = accessories.filter { accessory in
-            accessory.protocolStrings.contains(where: { sonyProtocols.contains($0) })
+        let sony = accessories.filter {
+            $0.protocolStrings.contains(where: { sonyProtocols.contains($0) })
         }
         result = sony.isEmpty
-            ? "未發現 Sony ExternalAccessory 協定（不能據此判定耳機未配對）"
-            : "找到 \(sony.count) 個宣告 Sony 協定的裝置；尚未驗證 EASession 可用"
+            ? "未發現 Sony ExternalAccessory 協定（不代表耳機未配對）"
+            : "找到 \(sony.count) 個 Sony 協定裝置；可測試 EASession 或唯讀 ANC 查詢"
     }
 
     func testSession() {
+        start(query: false)
+    }
+
+    func readANC() {
+        start(query: true)
+    }
+
+    private func start(query: Bool) {
         guard !probing else { return }
         closeSession()
+        trace = []
         let accessories = EAAccessoryManager.shared().connectedAccessories
         guard let match = accessories.lazy.compactMap({ accessory -> (EAAccessory, String)? in
-            guard let proto = self.sonyProtocols.first(where: { accessory.protocolStrings.contains($0) }) else {
-                return nil
-            }
+            guard accessory.modelNumber == "WF-1000XM4",
+                  let proto = self.sonyProtocols.first(where: { accessory.protocolStrings.contains($0) })
+            else { return nil }
             return (accessory, proto)
         }).first else {
-            result = "沒有可測試的 Sony ExternalAccessory 裝置／協定"
+            result = "未找到 WF-1000XM4 的 Sony 協定；沒有送出指令"
             return
         }
-
-        guard let opened = EASession(accessory: match.0, forProtocol: match.1) else {
-            result = "EASession 建立失敗；公開 API 無法取得此協定的工作階段"
+        guard let opened = EASession(accessory: match.0, forProtocol: match.1),
+              let input = opened.inputStream, let output = opened.outputStream else {
+            result = "EASession 無法建立；沒有送出指令"
             return
         }
-
         session = opened
+        readOnlyQuery = query
+        receivedState = false
+        querySent = false
+        sequence = 0
+        buffer.removeAll()
+        pending.removeAll()
         probing = true
-        result = "已建立 EASession 物件；正在測試唯讀 stream 開啟（不送出資料）"
-        opened.inputStream?.open()
-        opened.outputStream?.open()
+        generation += 1
+        let token = generation
+        addTrace("Protocol: \(match.1); action: \(query ? "GET ANC only" : "stream-open only")")
 
-        DispatchQueue.main.asyncAfter(deadline: .now() + 2) { [weak self, weak opened] in
-            guard let self = self, self.probing, let streamSession = opened else { return }
-            let input = streamSession.inputStream
-            let output = streamSession.outputStream
-            let inStatus = input.map { String(describing: $0.streamStatus) } ?? "nil"
-            let outStatus = output.map { String(describing: $0.streamStatus) } ?? "nil"
-            let inError = input?.streamError?.localizedDescription ?? "none"
-            let outError = output?.streamError?.localizedDescription ?? "none"
-            self.result = "EASession stream 狀態：input=\(inStatus), output=\(outStatus)；錯誤 input=\(inError), output=\(outError)。不代表 Sony ANC 指令已通過驗證。"
+        for stream in [input as Stream, output as Stream] {
+            stream.delegate = self
+            stream.schedule(in: .main, forMode: .common)
+            stream.open()
+        }
+        result = query ? "正在開啟串流並等待發送唯讀 ANC 查詢…" : "正在檢查 EASession 串流…"
+
+        DispatchQueue.main.asyncAfter(deadline: .now() + (query ? 6 : 2)) { [weak self] in
+            guard let self = self, self.probing, self.generation == token else { return }
+            let inputStatus = String(describing: input.streamStatus)
+            let outputStatus = String(describing: output.streamStatus)
+            self.addTrace("Stream end: input=\(inputStatus) output=\(outputStatus)")
+            if query {
+                self.result = self.receivedState
+                    ? self.result
+                    : "未取得有效 67 15 ANC 回覆；GET sent=\(self.querySent)。不會嘗試切換模式。"
+            } else {
+                self.result = "EASession stream 狀態：input=\(inputStatus), output=\(outputStatus)；錯誤 input=\(input.streamError?.localizedDescription ?? "none"), output=\(output.streamError?.localizedDescription ?? "none")"
+            }
             self.closeSession()
         }
     }
 
+    func stream(_ aStream: Stream, handle eventCode: Stream.Event) {
+        guard probing else { return }
+        if eventCode.contains(.errorOccurred) {
+            addTrace("Stream error: \(aStream.streamError?.localizedDescription ?? "unknown")")
+            result = "串流錯誤；無法確認 ANC 狀態"
+            closeSession()
+            return
+        }
+        if eventCode.contains(.endEncountered) {
+            addTrace("Stream ended")
+            if !receivedState { result = "耳機關閉串流，未確認 ANC 狀態" }
+            closeSession()
+            return
+        }
+        if eventCode.contains(.hasBytesAvailable), let input = session?.inputStream {
+            read(input)
+        }
+        if eventCode.contains(.hasSpaceAvailable), let output = session?.outputStream {
+            if readOnlyQuery && !querySent && output.streamStatus == .open {
+                querySent = true
+                addTrace("TX: ANC GET 66 15")
+                enqueue(encode(type: 0x0C, sequence: sequence, payload: [0x66, 0x15]))
+                sequence ^= 1
+            }
+            flush(output)
+        }
+        if eventCode.contains(.openCompleted) {
+            addTrace("Stream opened")
+            if readOnlyQuery && !querySent,
+               let output = session?.outputStream, output.hasSpaceAvailable {
+                querySent = true
+                addTrace("TX: ANC GET 66 15")
+                enqueue(encode(type: 0x0C, sequence: sequence, payload: [0x66, 0x15]))
+                sequence ^= 1
+                flush(output)
+            }
+        }
+    }
+
+    private func enqueue(_ bytes: [UInt8]) {
+        pending.append(contentsOf: bytes)
+        if let output = session?.outputStream, output.hasSpaceAvailable { flush(output) }
+    }
+
+    private func flush(_ output: OutputStream) {
+        guard !pending.isEmpty, output.hasSpaceAvailable else { return }
+        let count = pending.withUnsafeBufferPointer { ptr in
+            output.write(ptr.baseAddress!, maxLength: ptr.count)
+        }
+        if count > 0 {
+            pending.removeFirst(count)
+        } else if count < 0 {
+            addTrace("TX error: \(output.streamError?.localizedDescription ?? "unknown")")
+            result = "無法傳送查詢"
+            closeSession()
+        }
+    }
+
+    private func read(_ input: InputStream) {
+        var chunk = [UInt8](repeating: 0, count: 512)
+        while input.hasBytesAvailable {
+            let n = input.read(&chunk, maxLength: chunk.count)
+            if n <= 0 { break }
+            buffer.append(contentsOf: chunk.prefix(n))
+            if buffer.count > 4096 {
+                addTrace("RX buffer exceeded safety limit")
+                result = "收到過量資料，停止查詢"
+                closeSession()
+                return
+            }
+            parseFrames()
+        }
+    }
+
+    private func parseFrames() {
+        while let start = buffer.firstIndex(of: 0x3E) {
+            if start > 0 { buffer.removeFirst(start) }
+            guard let end = buffer.dropFirst().firstIndex(of: 0x3C) else { return }
+            let wire = Array(buffer[1..<end])
+            buffer.removeFirst(end + 1)
+            var body = [UInt8]()
+            var i = 0
+            var valid = true
+            while i < wire.count {
+                let byte = wire[i]
+                if byte == 0x3D {
+                    i += 1
+                    guard i < wire.count else { valid = false; break }
+                    switch wire[i] {
+                    case 0x2C: body.append(0x3C)
+                    case 0x2D: body.append(0x3D)
+                    case 0x2E: body.append(0x3E)
+                    default: valid = false
+                    }
+                } else {
+                    body.append(byte)
+                }
+                i += 1
+            }
+            guard valid, body.count >= 7 else { addTrace("Malformed RX frame"); continue }
+            let length = (UInt32(body[2]) << 24) | (UInt32(body[3]) << 16) |
+                         (UInt32(body[4]) << 8) | UInt32(body[5])
+            guard length <= 1024, body.count == Int(length) + 7 else {
+                addTrace("Invalid RX frame length")
+                continue
+            }
+            let expected = body.dropLast().reduce(UInt8(0)) { $0 &+ $1 }
+            guard expected == body.last else { addTrace("RX checksum mismatch"); continue }
+            let type = body[0], receivedSequence = body[1]
+            let payload = Array(body[6..<(6 + Int(length))])
+            addTrace("RX type=\(hex(type)) seq=\(receivedSequence) payload=\(payload.map(hex).joined(separator: " "))")
+            if type == 0x01 && receivedSequence < 2 { sequence = receivedSequence }
+            if type == 0x0C {
+                enqueue(encode(type: 0x01, sequence: 1 &- (receivedSequence & 1), payload: []))
+            }
+            if type == 0x0C && payload.count == 8 &&
+                payload[0] == 0x67 && payload[1] == 0x15 &&
+                payload[2] == 1 && payload[3] <= 1 &&
+                payload[4] <= 1 && payload[6] <= 1 && payload[7] <= 20 {
+                let mode = payload[3] == 0 ? "OFF" : (payload[4] == 1 ? "AMBIENT" : "ANC")
+                result = "已收到有效 Sony ANC 狀態：\(mode)，環境音等級 \(payload[7])。未更改任何模式。"
+                receivedState = true
+            }
+        }
+        if buffer.firstIndex(of: 0x3E) == nil { buffer.removeAll() }
+    }
+
+    private func encode(type: UInt8, sequence: UInt8, payload: [UInt8]) -> [UInt8] {
+        var body: [UInt8] = [type, sequence, 0, 0, 0, 0, UInt8(payload.count)]
+        body.append(contentsOf: payload)
+        body.append(body.reduce(UInt8(0)) { $0 &+ $1 })
+        var frame: [UInt8] = [0x3E]
+        for byte in body {
+            switch byte {
+            case 0x3C: frame.append(contentsOf: [0x3D, 0x2C])
+            case 0x3D: frame.append(contentsOf: [0x3D, 0x2D])
+            case 0x3E: frame.append(contentsOf: [0x3D, 0x2E])
+            default: frame.append(byte)
+            }
+        }
+        frame.append(0x3C)
+        return frame
+    }
+
+    private func hex(_ byte: UInt8) -> String {
+        String(format: "%02X", byte)
+    }
+
+    private func addTrace(_ line: String) {
+        if trace.count < 80 { trace.append(line) }
+    }
+
     private func closeSession() {
-        session?.inputStream?.close()
-        session?.outputStream?.close()
+        generation += 1
+        for stream in [session?.inputStream as Stream?, session?.outputStream as Stream?].compactMap({ $0 }) {
+            stream.close()
+            stream.remove(from: .main, forMode: .common)
+            stream.delegate = nil
+        }
         session = nil
+        pending.removeAll()
         probing = false
     }
 
