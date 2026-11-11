@@ -4,7 +4,7 @@ import WidgetKit
 
 struct ContentView: View {
     @StateObject private var scanner = BLEScanner()
-    @StateObject private var eaProbe = SonyEAProbe()
+    @StateObject private var eaProbe = SonyEAProbe.shared
     @State private var audioRoute = XM4AudioRoute.snapshot()
 
     private func refreshAudioRoute() {
@@ -86,7 +86,7 @@ struct ContentView: View {
                 Section("捷徑與三模式") {
                     Label("已加入捷徑：檢查 XM4 音訊連線", systemImage: "checkmark.circle")
                     Text("ANC → 環境音 → 關閉 → ANC 已在 Windows RFCOMM Channel 9 實機驗證。")
-                    Text("iOS ExternalAccessory 已實機讀到 Sony ANC 狀態。新增加的手動切換尚待 iPhone 確認；動作按鈕捷徑仍保持停用，避免未驗證的背景操作。")
+                    Text("iPhone 已實機驗證 ANC → 環境音的 SET + 獨立讀回。三模式捷徑現已接上 Sony ExternalAccessory 控制，捷徑背景執行和動作按鈕仍需另外實機確認。")
                         .font(.caption)
                         .foregroundStyle(.secondary)
                     Text("Widget 顯示音訊輸出快照與檢查時間；系統決定重新整理頻率。")
