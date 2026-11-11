@@ -78,7 +78,7 @@ struct XM4AppShortcuts: AppShortcutsProvider {
         )
         AppShortcut(
                 intent: CheckXM4AccessoryConnectedIntent(),
-                phrases: ["Check \\(.applicationName) Sony connection"],
+                phrases: ["Check \(.applicationName) Sony connection"],
                 shortTitle: "XM4 是否已連線",
                 systemImageName: "headphones.circle"
         )
