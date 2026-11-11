@@ -1,4 +1,6 @@
 using InTheHand.Net.Sockets;
+using InTheHand.Net;
+using System.Net.Sockets;
 using System.Linq;
 
 var connectMode = args.Length == 2 && args[0] == "--connect";
@@ -37,6 +39,10 @@ try
             continue;
         }
         Console.WriteLine($"Attempting RFCOMM connect to {target} (no data writes)...");
+        var endpoint = new BluetoothEndPoint(device.DeviceAddress, target);
+        var serialized = endpoint.Serialize();
+        Console.WriteLine($"Endpoint: family={endpoint.AddressFamily}; sockaddr size={serialized.Size}; service={endpoint.Service}; port={endpoint.Port}");
+        Console.WriteLine($"Socket: family={probe.Client.AddressFamily}; type={probe.Client.SocketType}; protocol={probe.Client.ProtocolType}");
         using var probe = new BluetoothClient();
         try
         {
