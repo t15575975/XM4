@@ -4,6 +4,7 @@ import WidgetKit
 
 struct ContentView: View {
     @StateObject private var scanner = BLEScanner()
+    @StateObject private var eaProbe = SonyEAProbe()
     @State private var audioRoute = XM4AudioRoute.snapshot()
 
     private func refreshAudioRoute() {
@@ -48,6 +49,26 @@ struct ContentView: View {
                     }
                 }
 
+                Section("Sony ExternalAccessory 診斷") {
+                    Text("讀取 iOS 可見的外部配件與 Sony 協定。僅在你按下測試按鈕時嘗試開啟 EASession，不傳送任何耳機控制封包。")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                    Button("重新搜尋 ExternalAccessory") { eaProbe.refresh() }
+                    Button(eaProbe.probing ? "測試進行中" : "測試 Sony EASession 開啟") {
+                        eaProbe.testSession()
+                    }
+                    .disabled(eaProbe.probing)
+                    Text(eaProbe.result)
+                        .font(.caption)
+                        .textSelection(.enabled)
+                    ForEach(Array(eaProbe.details.enumerated()), id: \.offset) { item in
+                        Text(item.element).font(.caption2).textSelection(.enabled)
+                    }
+                    Button("複製 EA 診斷結果") {
+                        UIPasteboard.general.string = ([eaProbe.result] + eaProbe.details).joined(separator: "\\n")
+                    }
+                }
+
                 Section("捷徑與三模式") {
                     Label("已加入捷徑：檢查 XM4 音訊連線", systemImage: "checkmark.circle")
                     Text("ANC → 環境音 → 關閉 → ANC 已在 Windows RFCOMM Channel 9 實機驗證。")
@@ -88,7 +109,7 @@ struct ContentView: View {
                 }
             }
             .navigationTitle("XM4Control")
-            .onAppear { refreshAudioRoute() }
+            .onAppear { refreshAudioRoute(); eaProbe.refresh() }
             .onReceive(NotificationCenter.default.publisher(for: AVAudioSession.routeChangeNotification)) { _ in
                 refreshAudioRoute()
             }
