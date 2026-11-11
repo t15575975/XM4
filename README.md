@@ -2,13 +2,18 @@
 
 Experimental iOS companion project for Sony WF-1000XM4.
 
-## Phase 1 status
+## Current status (2026-11-11)
 
-This repository is a **research/test scaffold**, not a working noise-control app.
+**Windows Sony ANC control confirmed on physical WF-1000XM4 firmware 2.3.1.** The native Winsock2 tool connected via Bluetooth Classic RFCOMM channel 9, read the Sony V2 `67 15` status, sent `68 15 01 00 00 02 00 14`, received an ACK, and read back **OFF**. The wearer separately confirmed that ANC/environmental processing truly switched off. The previously active mode was AMBIENT level 20.
 
-The public Sony reverse-engineering projects describe a vendor Bluetooth Classic RFCOMM/SPP control channel. Their desktop implementations do not prove that a third-party iOS app can open that channel. Apple's Core Bluetooth is not a general RFCOMM socket API, and External Accessory is intended for supported MFi accessories.
+- `--native-read-anc`: read the real current ANC mode, no setting change (verified).
+- `--set-off`: set OFF with read-before-write / readback verification (verified from AMBIENT).
+- `--set-anc`, `--set-ambient`, `--cycle`: implemented and CI-compiled, **not yet hardware-verified** for all transitions.
+- [Windows validation log and source evidence](docs/windows-rfcomm-validation.md).
 
-Therefore this first build only tests what iOS can discover through CoreBluetooth (BLE). It does **not** send Sony control packets and does not change ANC modes.
+From a Windows checkout in `tools/XM4SdpProbe`, use `dotnet run -- --cycle` for one step in the requested **ANC → AMBIENT → OFF → ANC** sequence; every command reads the current mode before setting and verifies the result. Test only while stationary.
+
+**iPhone direct-control goal is still blocked.** The iOS project can scan/read BLE, but no usable iOS Sony ANC transport has been validated. Public iOS CoreBluetooth is not a general RFCOMM socket API; ExternalAccessory access needs accessory protocol support. Windows success must not be described as a working iPhone Action Button/IPA solution.
 
 ## Requirements
 
