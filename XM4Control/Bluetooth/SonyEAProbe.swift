@@ -1,4 +1,5 @@
 import Foundation
+import Combine
 import ExternalAccessory
 
 /// Passive ExternalAccessory discovery plus an explicitly requested stream-open test.
