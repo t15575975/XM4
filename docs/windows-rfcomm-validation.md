@@ -1,6 +1,6 @@
 # WF-1000XM4 Windows RFCOMM validation
 
-Status: **research-only; SDP confirmed; RFCOMM channel 9 native connection confirmed; Sony ANC query pending on-device validation** (2026-11-11).
+Status: **Windows RFCOMM channel 9 AND Sony V2 ANC state read confirmed on actual WF-1000XM4 firmware 2.3.1; write commands not yet validated on device** (2026-11-11).
 
 ## Actual user observations
 
@@ -76,3 +76,53 @@ dotnet run -- --native-read-anc
 Expected successful result: `ANC STATE CONFIRMED: OFF`, `ANC STATE CONFIRMED: ANC`, or `ANC STATE CONFIRMED: AMBIENT`, based on a valid 8-byte `67 15` response. This has **not yet been tested on the user's earbuds**.
 
 Offline transport codec tests are run by Windows CI and can be run using `dotnet run -- --self-test`. **Do not proceed to ANC writes before validating this GET response.**
+
+
+## 2026-11-11: Sony readback verified on the user's headset
+
+Actual console transcript excerpt:
+
+```text
+ANC GET 66 15 sent: 3E0C00000000026615893C
+Frame: type=0x0C, seq=1, payload=C90100096F705141537461727400
+Protocol ACK sent: 3E010000000000013C
+Frame: type=0x01, seq=1, payload=
+Frame: type=0x0C, seq=0, payload=C90100076F705141456E6400
+Protocol ACK sent: 3E010100000000023C
+Frame: type=0x0C, seq=1, payload=6715010101020014
+Protocol ACK sent: 3E010000000000013C
+ANC STATE CONFIRMED: AMBIENT; ambientLevel=20; voiceFocus=0; windRaw=0x02
+```
+
+The device first sent unsolicited `C9 01` notifications, confirming that correctly correlating frames and ACKing notifications matters. The expected `67 15` response arrived later and was decoded as AMBIENT level 20, wind parameter 0x02, voice focus 0.
+
+### Opt-in three-mode Windows write test
+
+The source-proven Sony V2 WF-1000XM4 write layout is `68 15 01 effect ambient wind voice level`. The program reads `67 15` first and **aborts without writing** if the frame is missing or malformed. It preserves the headset's wind setting and the previous focus/level values (clamping ambient level 0 to 1). After a single setting command it reads `67 15` again; it only reports `MODE CHANGE VERIFIED` when the returned mode matches the request. It will not automatically retry writes.
+
+To run one controlled, stationary-device test from an AMBIENT starting state:
+
+```powershell
+cd F:\上傳作業區\XM4
+git pull
+cd tools\XM4SdpProbe
+dotnet run -- --self-test
+dotnet run -- --set-off
+```
+
+Further explicit modes:
+
+```powershell
+dotnet run -- --set-anc
+dotnet run -- --set-ambient
+```
+
+One manual press/command cycle (always ANC -> AMBIENT -> OFF -> ANC based on actual queried state):
+
+```powershell
+dotnet run -- --cycle
+```
+
+The user must explicitly invoke a control command; no background mode changes. No iOS direct control path has been verified.
+
+**Do not interpret successful static compilation or offline tests as validation of actual ANC switching. Hardware readback after SET is the remaining Windows milestone.**
