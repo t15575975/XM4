@@ -8,6 +8,11 @@ import ExternalAccessory
 final class SonyEAProbe: NSObject, ObservableObject, StreamDelegate {
     static let shared = SonyEAProbe()
 
+    override init() {
+        super.init()
+        EAAccessoryManager.shared().registerForLocalNotifications()
+    }
+
     /// Exact physical Sony control connection; an inactive iPhone audio route
     /// does not mean the headset is disconnected.
     static func isConnectedXM4() -> Bool {
@@ -111,7 +116,9 @@ final class SonyEAProbe: NSObject, ObservableObject, StreamDelegate {
             else { return nil }
             return (accessory, proto)
         }).first else {
-            result = "未找到 WF-1000XM4 的 Sony 協定；沒有送出指令"
+            let visible = accessories.map { $0.modelNumber }.joined(separator: ", ")
+            addTrace("EA visibility count=\(accessories.count); models=\(visible)")
+            result = "捷徑執行環境未找到 WF-1000XM4 Sony 協定（可見 \(accessories.count) 台）；沒有送出指令。若 App 內正常，可能是背景捷徑無法取得 ExternalAccessory 裝置。"
             completeShortcut()
             return
         }
