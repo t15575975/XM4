@@ -50,7 +50,7 @@ struct ContentView: View {
                 }
 
                 Section("Sony ExternalAccessory 診斷") {
-                    Text("已確認 iPhone 可開啟 Sony EASession。讀取 ANC 狀態會傳送唯讀 GET 66 15 與必要協定 ACK，但不會送出切換模式的 SET 指令。")
+                    Text("iPhone 已實機驗證 Sony GET 66 15 回覆；可選擇唯讀查詢或手動執行一次 ANC 循環 SET 68 15（需讀回確認）。")
                         .font(.caption)
                         .foregroundStyle(.secondary)
                     Button("重新搜尋 ExternalAccessory") { eaProbe.refresh() }
@@ -62,6 +62,13 @@ struct ContentView: View {
                         eaProbe.readANC()
                     }
                     .disabled(eaProbe.probing)
+                    Button(eaProbe.probing ? "切換／查詢進行中" : "手動切換 XM4 下一模式（實際變更耳機）") {
+                        eaProbe.cycleOnce()
+                    }
+                    .disabled(eaProbe.probing)
+                    Text("只在靜止且安全的環境測試。每次按下只進行一次 ANC → 環境音 → 關閉 → ANC，先讀取模式並讀回驗證；失敗不自動重試。")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
                     Text(eaProbe.result)
                         .font(.caption)
                         .textSelection(.enabled)
@@ -79,7 +86,7 @@ struct ContentView: View {
                 Section("捷徑與三模式") {
                     Label("已加入捷徑：檢查 XM4 音訊連線", systemImage: "checkmark.circle")
                     Text("ANC → 環境音 → 關閉 → ANC 已在 Windows RFCOMM Channel 9 實機驗證。")
-                    Text("iPhone 尚未驗證能直接開啟 Sony RFCOMM 控制通道。捷徑中的三模式操作目前會明確回報不支援，不會假裝已切換。")
+                    Text("iOS ExternalAccessory 已實機讀到 Sony ANC 狀態。新增加的手動切換尚待 iPhone 確認；動作按鈕捷徑仍保持停用，避免未驗證的背景操作。")
                         .font(.caption)
                         .foregroundStyle(.secondary)
                     Text("Widget 顯示音訊輸出快照與檢查時間；系統決定重新整理頻率。")
