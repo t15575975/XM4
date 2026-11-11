@@ -16,6 +16,11 @@
   <string>1.1.0</string>
   <key>CFBundleVersion</key>
   <string>110</string>
+  <key>UISupportedExternalAccessoryProtocols</key>
+  <array>
+    <string>jp.co.sony.songpal.mdr.link</string>
+    <string>jp.co.sony.songpal.mdr.link2</string>
+  </array>
   <key>NSExtension</key>
   <dict>
     <key>NSExtensionPointIdentifier</key>
